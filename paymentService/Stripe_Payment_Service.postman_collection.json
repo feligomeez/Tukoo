@@ -1,0 +1,144 @@
+{
+	"info": {
+		"_postman_id": "random-uuid",
+		"name": "Stripe Payment Service",
+		"description": "Colección para probar el microservicio de pagos con Stripe",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Create Payment Intent",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/x-www-form-urlencoded"
+					}
+				],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "amount",
+							"value": "50.00",
+							"description": "Monto en EUR"
+						},
+						{
+							"key": "senderId",
+							"value": "user123",
+							"description": "ID del pagador"
+						},
+						{
+							"key": "receiverId",
+							"value": "seller456",
+							"description": "ID del vendedor"
+						},
+						{
+							"key": "description",
+							"value": "Alquiler de cámara",
+							"description": "Descripción del pago"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8081/api/payments/create-payment-intent",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "8081",
+					"path": ["api", "payments", "create-payment-intent"]
+				},
+				"description": "Crear una intención de pago"
+			}
+		},
+		{
+			"name": "Confirm Payment",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8081/api/payments/confirm/{{paymentIntentId}}",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "8081",
+					"path": ["api", "payments", "confirm", "{{paymentIntentId}}"]
+				},
+				"description": "Confirmar un pago (usar el paymentIntentId recibido en la creación)"
+			}
+		},
+		{
+			"name": "Transfer to Receiver",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/x-www-form-urlencoded"
+					}
+				],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "paymentIntentId",
+							"value": "{{paymentIntentId}}",
+							"description": "ID de la intención de pago"
+						},
+						{
+							"key": "receiverStripeAccountId",
+							"value": "acct_xxxxx",
+							"description": "ID de la cuenta Stripe del vendedor"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8081/api/payments/transfer",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "8081",
+					"path": ["api", "payments", "transfer"]
+				},
+				"description": "Transferir el dinero al vendedor"
+			}
+		},
+		{
+			"name": "Webhook Test",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Stripe-Signature",
+						"value": "{{stripeSignature}}",
+						"description": "Firma proporcionada por Stripe CLI"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"id\": \"evt_xxx\",\n  \"object\": \"event\",\n  \"type\": \"payment_intent.succeeded\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"{{paymentIntentId}}\",\n      \"object\": \"payment_intent\",\n      \"status\": \"succeeded\"\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8081/api/webhook/stripe",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "8081",
+					"path": ["api", "webhook", "stripe"]
+				},
+				"description": "Probar webhook (normalmente no necesitas llamar esto directamente)"
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "paymentIntentId",
+			"value": "pi_xxxx"
+		},
+		{
+			"key": "stripeSignature",
+			"value": "whsec_xxxx"
+		}
+	]
+} 
