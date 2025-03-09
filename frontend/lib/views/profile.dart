@@ -1,13 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/views/main.dart';
-import 'package:frontend/views/publish.dart';
 import 'package:frontend/views/login.dart';
-import 'package:frontend/views/messages.dart';
 import 'package:frontend/views/reviews.dart';
 import 'package:frontend/views/custom_bottom_nav.dart';
+import 'package:frontend/services/auth_service.dart';
 
-class ProfileView extends StatelessWidget {
+class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
+
+  @override
+  State<ProfileView> createState() => _ProfileViewState();
+}
+
+class _ProfileViewState extends State<ProfileView> {
+  final AuthService _authService = AuthService();
+  String _username = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername();
+  }
+
+  Future<void> _loadUsername() async {
+    final username = await _authService.getUsername();
+    setState(() {
+      _username = username ?? 'Usuario';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +47,9 @@ class ProfileView extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.deepOrange),
-            onPressed: () {
+            onPressed: () async {
+              await _authService.logout();
+              // ignore: use_build_context_synchronously
               Navigator.pushReplacement(
                 context,
                 PageRouteBuilder(
@@ -55,9 +76,9 @@ class ProfileView extends StatelessWidget {
                     backgroundImage: AssetImage('assets/profile_image.jpg'),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'María González',
-                    style: TextStyle(
+                  Text(
+                    _username,
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),

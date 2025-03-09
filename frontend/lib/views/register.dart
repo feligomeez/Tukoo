@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/views/login.dart';
+import 'package:frontend/services/auth_service.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
@@ -14,6 +15,7 @@ class _RegisterViewState extends State<RegisterView> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   String? _selectedCity;
+  final AuthService _authService = AuthService();
 
   final List<String> _cities = [
     'Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Zaragoza',
@@ -251,16 +253,34 @@ class _RegisterViewState extends State<RegisterView> {
                           ),
                           const SizedBox(height: 24),
                           ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
                               if (_formKey.currentState!.validate()) {
-                                Navigator.pushReplacement(
-                                  context,
-                                  PageRouteBuilder(
-                                    pageBuilder: (context, animation, secondaryAnimation) => const LoginView(),
-                                    transitionDuration: Duration.zero,
-                                    reverseTransitionDuration: Duration.zero,
-                                  ),
+                                final bool success = await _authService.register(
+                                  _usernameController.text,
+                                  _emailController.text,
+                                  _passwordController.text,
+                                  _selectedCity!,
                                 );
+                                
+                                if (success) {
+                                  // ignore: use_build_context_synchronously
+                                  Navigator.pushReplacement(
+                                    context,
+                                    PageRouteBuilder(
+                                      pageBuilder: (context, animation, secondaryAnimation) => const LoginView(),
+                                      transitionDuration: Duration.zero,
+                                      reverseTransitionDuration: Duration.zero,
+                                    ),
+                                  );
+                                } else {
+                                  // ignore: use_build_context_synchronously
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Error al registrar el usuario. Por favor, inténtalo de nuevo.'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
                               }
                             },
                             style: ElevatedButton.styleFrom(
@@ -322,4 +342,4 @@ class _RegisterViewState extends State<RegisterView> {
       ),
     );
   }
-} 
+}

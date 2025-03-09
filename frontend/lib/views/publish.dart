@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import './main.dart';
-import './profile.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import './messages.dart';
 import './custom_bottom_nav.dart';
+import '../services/product_service.dart';
 
 class PublishView extends StatefulWidget {
   const PublishView({super.key});
@@ -19,6 +17,7 @@ class _PublishViewState extends State<PublishView> {
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
   final _cityController = TextEditingController();
+  final _locationController = TextEditingController();
   final List<File> _images = [];
   final ImagePicker _picker = ImagePicker();
   String? _selectedCategory;
@@ -26,6 +25,8 @@ class _PublishViewState extends State<PublishView> {
     'Electrónica', 'Moda', 'Hogar', 'Deportes', 'Juguetes',
     'Vehículos', 'Inmobiliaria', 'Servicios', 'Otros'
   ];
+  final ProductService _productService = ProductService();
+  bool _isLoading = false;  // Para controlar el estado de carga
 
   /*Future<void> _getImage() async {
     try {
@@ -48,6 +49,7 @@ class _PublishViewState extends State<PublishView> {
     _descriptionController.dispose();
     _priceController.dispose();
     _cityController.dispose();
+    _locationController.dispose();  // Añadir el dispose del nuevo controller
     super.dispose();
   }
 
@@ -157,7 +159,7 @@ class _PublishViewState extends State<PublishView> {
                       controller: _priceController,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
-                        labelText: 'Precio por mes',
+                        labelText: 'Precio por día',
                         prefixText: '€ ',
                         filled: true,
                         fillColor: Colors.grey[100],
@@ -198,21 +200,89 @@ class _PublishViewState extends State<PublishView> {
                     ),
                     const SizedBox(height: 24),
 
+                    // Ciudad
+                    TextFormField(
+                      controller: _locationController,
+                      decoration: InputDecoration(
+                        labelText: 'Ciudad',
+                        hintText: 'Ej: Madrid',
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor ingresa una ciudad';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
                     // Botón publicar
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: _isLoading ? null : () async {  // Deshabilitar durante la carga
                           if (_formKey.currentState!.validate()) {
-                            if (_images.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Por favor, añade al menos una foto')),
+                            setState(() {
+                              _isLoading = true;  // Iniciar carga
+                            });
+
+                            try {
+                              final price = double.parse(_priceController.text);
+                              final success = await _productService.createListing(
+                                title: _titleController.text,
+                                description: _descriptionController.text,
+                                pricePerDay: price,
+                                category: _selectedCategory!,
+                                location: _locationController.text,
                               );
-                              return;
+
+                              if (success) {
+                                // ignore: use_build_context_synchronously
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('¡Anuncio publicado con éxito!'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                
+                                // Esperar un momento para que se vea el mensaje
+                                await Future.delayed(const Duration(seconds: 1));
+                                
+                                // ignore: use_build_context_synchronously
+                                Navigator.pushNamedAndRemoveUntil(
+                                  context,
+                                  '/main', // Asumiendo que esta es la ruta definida para main.dart
+                                  (route) => false, // Esto elimina todas las rutas anteriores del stack
+                                );
+                              } else {
+                                // ignore: use_build_context_synchronously
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Error al publicar el anuncio'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            } finally {
+                              if (mounted) {
+                                setState(() {
+                                  _isLoading = false;  // Finalizar carga
+                                });
+                              }
                             }
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Publicando anuncio...')),
-                            );
                           }
                         },
                         style: ElevatedButton.styleFrom(
@@ -222,13 +292,22 @@ class _PublishViewState extends State<PublishView> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text(
-                          'Publicar Anuncio',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Publicar Anuncio',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
                   ],

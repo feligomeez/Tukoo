@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import './chat.dart';
-import './main.dart';
-import './profile.dart';
-import './publish.dart';
 import './custom_bottom_nav.dart';
 
 class MessagesView extends StatelessWidget {

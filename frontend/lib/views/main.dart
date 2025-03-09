@@ -5,6 +5,8 @@ import './login.dart';
 import './profile.dart';
 import './publish.dart';
 import './messages.dart';
+import '../models/product.dart';
+
 
 class HomeScreen extends StatefulWidget {
   @override

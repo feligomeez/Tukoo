@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/product.dart';
 
 class ProductService {
   static const String _baseUrl = 'http://192.168.1.136:8080';
@@ -29,42 +30,53 @@ class ProductService {
       throw Exception('Failed to load products');
     }
   }
-}
 
-class Product {
-  final int id;
-  final String title;
-  final String description;
-  final double pricePerDay;
-  final int ownerId;
-  final String location;
-  final String status;
-  final String createdAt;
-  final String? updatedAt;
+  Future<bool> createListing({
+    required String title,
+    required String description,
+    required double pricePerDay,
+    required String category,
+    required String location,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final userId = prefs.getString('user_id');
 
-  Product({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.pricePerDay,
-    required this.ownerId,
-    required this.location,
-    required this.status,
-    required this.createdAt,
-    this.updatedAt,
-  });
+      if (token == null || userId == null) {
+        print('Token or userId not found');
+        return false;
+      }
 
-  factory Product.fromJson(Map<String, dynamic> json) {
-    return Product(
-      id: json['id'],
-      title: json['title'],
-      description: json['description'],
-      pricePerDay: json['pricePerDay'],
-      ownerId: json['ownerId'],
-      location: json['location'],
-      status: json['status'],
-      createdAt: json['createdAt'],
-      updatedAt: json['updatedAt'],
-    );
+      final requestBody = {
+        'title': title,
+        'description': description,
+        'pricePerDay': pricePerDay,
+        'category': category,
+        'ownerId': int.parse(userId),
+        'location': location
+      };
+
+      print('Request body: ${json.encode(requestBody)}');
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/listing'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode(requestBody),
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      return response.statusCode == 201 || response.statusCode == 200;
+    } catch (e) {
+      print('Error creating listing: $e');
+      print('Stack trace: ${StackTrace.current}');
+      return false;
+    }
   }
 }
+

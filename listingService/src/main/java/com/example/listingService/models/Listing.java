@@ -26,7 +26,6 @@ public class Listing {
     private Double pricePerDay;
 
     @Column(nullable = false)
-    @JoinColumn(name = "owner_id")
     private Long ownerId;
 
     private String location;
