@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 import '../models/product.dart';
 
 class ProductService {
@@ -28,6 +29,38 @@ class ProductService {
       return products;
     } else {
       throw Exception('Failed to load products');
+    }
+  }
+
+  Future<Product> fetchProductById(int id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+
+      if (token == null) {
+        throw Exception('Token not found');
+      }
+
+      debugPrint('Fetching product with ID: $id');
+      final response = await http.get(
+        Uri.parse('$_baseUrl/listing/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return Product.fromJson(json.decode(response.body));
+      } else {
+        throw Exception('Failed to load product: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error fetching product: $e');
+      throw Exception('Error loading product details: $e');
     }
   }
 

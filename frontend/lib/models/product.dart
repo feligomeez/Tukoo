@@ -1,40 +1,42 @@
+import 'package:flutter/foundation.dart';
+
 class Product {
   final int id;
   final String title;
   final String description;
   final double pricePerDay;
-  final int ownerId;
+  final String category;
   final String location;
-  final String status;
-  final String createdAt;
-  final String? updatedAt;
-  final String? category;
+  final int ownerId;
+  final String? createdAt;
 
   Product({
     required this.id,
     required this.title,
     required this.description,
     required this.pricePerDay,
-    required this.ownerId,
+    required this.category,
     required this.location,
-    required this.status,
-    required this.createdAt,
-    this.updatedAt,
-    this.category,
+    required this.ownerId,
+    this.createdAt,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
-    return Product(
-      id: json['id'],
-      title: json['title'],
-      description: json['description'],
-      pricePerDay: json['pricePerDay'],
-      ownerId: json['ownerId'],
-      location: json['location'],
-      status: json['status'],
-      createdAt: json['createdAt'],
-      updatedAt: json['updatedAt'],
-      category: json['category'],
-    );
+    try {
+      return Product(
+        id: json['id'] as int? ?? 0,
+        title: json['title'] as String? ?? '',
+        description: json['description'] as String? ?? '',
+        pricePerDay: (json['pricePerDay'] as num?)?.toDouble() ?? 0.0,
+        category: json['category'] as String? ?? '',
+        location: json['location'] as String? ?? '',
+        ownerId: json['ownerId'] as int? ?? 0,
+        createdAt: json['createdAt'] as String?,
+      );
+    } catch (e) {
+      debugPrint('Error parsing Product from JSON: $e');
+      debugPrint('JSON data: $json');
+      rethrow;
+    }
   }
 }
