@@ -1,5 +1,6 @@
 package com.example.reviewService.controllers;
 
+import com.example.reviewService.dto.UserReviewStats;
 import com.example.reviewService.models.Review;
 import com.example.reviewService.services.ReviewService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,8 +17,13 @@ public class ReviewController {
     private ReviewService reviewService;
 
     @GetMapping("/{userId}")
-    public ResponseEntity<List<Review>> getReviewsByUser(@PathVariable String userId) {
+    public ResponseEntity<UserReviewStats> getReviewsByUser(@PathVariable Long userId) {
         return ResponseEntity.ok(reviewService.getReviewsByUser(userId));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Review>> getReviews() {
+        return ResponseEntity.ok(reviewService.getReviews());
     }
 
     @PostMapping
@@ -30,7 +36,7 @@ public class ReviewController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> updateReview(@PathVariable String id, @RequestBody Review review) {
+    public ResponseEntity<String> updateReview(@PathVariable Long id, @RequestBody Review review) {
         String message = reviewService.updateReview(id, review);
         if(message.contains("Review updated successfully.")){
             return ResponseEntity.ok(message);
@@ -39,7 +45,7 @@ public class ReviewController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteReview(@PathVariable String id) {
+    public ResponseEntity<String> deleteReview(@PathVariable Long id) {
         return ResponseEntity.ok(reviewService.deleteReview(id));
     }
 }

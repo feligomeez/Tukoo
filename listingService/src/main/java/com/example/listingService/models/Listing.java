@@ -1,7 +1,7 @@
 package com.example.listingService.models;
 
 import java.time.LocalDateTime;
-
+import java.util.List;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -36,4 +36,7 @@ public class Listing {
     @Column(nullable = false)
     private String createdAt;
     private String updatedAt;
+
+    @OneToMany(mappedBy = "listing", cascade = CascadeType.ALL)
+    private List<ListingImage> images;
 }

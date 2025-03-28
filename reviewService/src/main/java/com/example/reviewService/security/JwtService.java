@@ -14,7 +14,7 @@ public class JwtService {
     @Value("${SECRETKEY}")
     private String secretKey;
 
-    public String extractUsername(String token) {
+    public String extractEmail(String token) {
         return Jwts.parser()
                 .verifyWith(getSignInKey())
                 .build()

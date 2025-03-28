@@ -1,23 +1,29 @@
 package com.example.chatService.models;
-import lombok.*;
+
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
-@Entity
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Entity
 public class ChatMessage {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long senderId;  // ID del usuario que envía el mensaje
-    private Long receiverId; // ID del usuario que recibe el mensaje
-    private Long listingId; // ID del listing (opcional si los chats son sobre un listing)
-    private String content; // Contenido del mensaje
+    private String content;
+    private String senderId;    // Mantenemos como String
+    private String receiverId;  // Mantenemos como String
+    private LocalDateTime timestamp;
 
-    private LocalDateTime timestamp = LocalDateTime.now();
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "conversation_id")
+    private ChatConversation conversation;
 }

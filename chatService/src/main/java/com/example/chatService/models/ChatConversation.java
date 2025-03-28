@@ -1,25 +1,41 @@
 package com.example.chatService.models;
 
-
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Entity
 public class ChatConversation {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long user1Id;
-    private Long user2Id;
-    private Long listingId; // Opcional
+    private String participant1Id;
+    private String participant2Id;
 
-    @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL)
-    private List<ChatMessage> messages;
+    @OneToMany(
+        mappedBy = "conversation",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true
+    )
+    private List<ChatMessage> messages = new ArrayList<>();
+
+    public void addMessage(ChatMessage message) {
+        messages.add(message);
+        message.setConversation(this);
+    }
+
+    public void removeMessage(ChatMessage message) {
+        messages.remove(message);
+        message.setConversation(null);
+    }
 }

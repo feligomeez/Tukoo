@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'package:frontend/views/main.dart';
 import './custom_bottom_nav.dart';
 import '../services/product_service.dart';
 
@@ -16,40 +15,21 @@ class _PublishViewState extends State<PublishView> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-  final _cityController = TextEditingController();
   final _locationController = TextEditingController();
-  final List<File> _images = [];
-  final ImagePicker _picker = ImagePicker();
   String? _selectedCategory;
   final List<String> _categories = [
     'Electrónica', 'Moda', 'Hogar', 'Deportes', 'Juguetes',
     'Vehículos', 'Inmobiliaria', 'Servicios', 'Otros'
   ];
   final ProductService _productService = ProductService();
-  bool _isLoading = false;  // Para controlar el estado de carga
+  bool _isLoading = false; // Para controlar el estado de carga
 
-  /*Future<void> _getImage() async {
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image != null) {
-        setState(() {
-          _images.add(File(image.path));
-        });
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al seleccionar imagen: $e')),
-      );
-    }
-  }
-*/
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
-    _cityController.dispose();
-    _locationController.dispose();  // Añadir el dispose del nuevo controller
+    _locationController.dispose();
     super.dispose();
   }
 
@@ -82,24 +62,6 @@ class _PublishViewState extends State<PublishView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Sección de fotos
-                    Container(
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.add_photo_alternate,
-                          size: 40,
-                          color: Colors.grey[400],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    
                     // Título
                     TextFormField(
                       controller: _titleController,
@@ -226,65 +188,54 @@ class _PublishViewState extends State<PublishView> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : () async {  // Deshabilitar durante la carga
-                          if (_formKey.currentState!.validate()) {
-                            setState(() {
-                              _isLoading = true;  // Iniciar carga
-                            });
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                if (_formKey.currentState!.validate()) {
+                                  setState(() {
+                                    _isLoading = true;
+                                  });
 
-                            try {
-                              final price = double.parse(_priceController.text);
-                              final success = await _productService.createListing(
-                                title: _titleController.text,
-                                description: _descriptionController.text,
-                                pricePerDay: price,
-                                category: _selectedCategory!,
-                                location: _locationController.text,
-                              );
+                                  try {
+                                    print('Intentando crear el anuncio...');
+                                    await _productService.createListing(
+                                      title: _titleController.text,
+                                      description: _descriptionController.text,
+                                      pricePerDay: double.parse(_priceController.text),
+                                      category: _selectedCategory!,
+                                      location: _locationController.text,
+                                    );
+                                    print('Anuncio creado correctamente en la base de datos.');
 
-                              if (success) {
-                                // ignore: use_build_context_synchronously
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('¡Anuncio publicado con éxito!'),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                                
-                                // Esperar un momento para que se vea el mensaje
-                                await Future.delayed(const Duration(seconds: 1));
-                                
-                                // ignore: use_build_context_synchronously
-                                Navigator.pushNamedAndRemoveUntil(
-                                  context,
-                                  '/main', // Asumiendo que esta es la ruta definida para main.dart
-                                  (route) => false, // Esto elimina todas las rutas anteriores del stack
-                                );
-                              } else {
-                                // ignore: use_build_context_synchronously
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Error al publicar el anuncio'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            } finally {
-                              if (mounted) {
-                                setState(() {
-                                  _isLoading = false;  // Finalizar carga
-                                });
-                              }
-                            }
-                          }
-                        },
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Anuncio creado correctamente')),
+                                    );
+                                    if (mounted) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (context) =>  HomeScreen()),
+                                      );
+                                      print('Navegación de regreso completada.');
+                                    } else {
+                                      print('El widget ya no está montado. No se puede navegar.');
+                                    }
+                                  } catch (e) {
+                                    print('Error al crear el anuncio: $e');
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e')),
+                                    );
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+                                      print('Estado de _isLoading actualizado a false.');
+                                    } else {
+                                      print('El widget ya no está montado. No se puede actualizar el estado.');
+                                    }
+                                  }
+                                }
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.deepOrange,
                           padding: const EdgeInsets.symmetric(vertical: 16),

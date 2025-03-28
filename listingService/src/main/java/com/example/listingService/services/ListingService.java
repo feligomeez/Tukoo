@@ -35,11 +35,10 @@ public class ListingService {
         return repository.findByOwnerId(ownerId);
     }
 
-    public String createListing(Listing listing){
+    public Listing createListing(Listing listing) {
         listing.setStatus("ACTIVE");
         listing.setCreatedAt(LocalDateTime.now().format(formatDate));
-        repository.save(listing);
-        return "Listing created successfully.";
+        return repository.save(listing);
     }
 
     public String updateListing(Long id, Listing listingDetails) {

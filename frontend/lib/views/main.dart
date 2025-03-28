@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:frontend/services/product_service.dart';
 import 'package:frontend/views/custom_bottom_nav.dart';
 import './login.dart';
-import './profile.dart';
-import './publish.dart';
-import './messages.dart';
 import '../models/product.dart';
 import './product_detail.dart';
 
@@ -15,11 +12,21 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Product>> futureProducts;
+  String _searchQuery = '';
+  String _selectedCategory = 'Todos';
 
   @override
   void initState() {
     super.initState();
     futureProducts = ProductService().fetchProducts();
+  }
+
+  List<Product> _filterProducts(List<Product> products) {
+    return products.where((product) {
+      final matchesSearchQuery = product.title.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesCategory = _selectedCategory == 'Todos' || product.category == _selectedCategory;
+      return matchesSearchQuery && matchesCategory;
+    }).toList();
   }
 
   @override
@@ -57,10 +64,16 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
+          // Barra de búsqueda
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             color: Colors.white,
             child: TextField(
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
               decoration: InputDecoration(
                 hintText: 'Buscar productos...',
                 hintStyle: TextStyle(color: Colors.grey[400]),
@@ -83,12 +96,12 @@ class _HomeScreenState extends State<HomeScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                _buildCategoryChip('Todos', true),
-                _buildCategoryChip('Electrónica', false),
-                _buildCategoryChip('Moda', false),
-                _buildCategoryChip('Hogar', false),
-                _buildCategoryChip('Deportes', false),
-                _buildCategoryChip('Juguetes', false),
+                _buildCategoryChip('Todos', _selectedCategory == 'Todos'),
+                _buildCategoryChip('Electrónica', _selectedCategory == 'Electrónica'),
+                _buildCategoryChip('Moda', _selectedCategory == 'Moda'),
+                _buildCategoryChip('Hogar', _selectedCategory == 'Hogar'),
+                _buildCategoryChip('Deportes', _selectedCategory == 'Deportes'),
+                _buildCategoryChip('Juguetes', _selectedCategory == 'Juguetes'),
               ],
             ),
           ),
@@ -104,6 +117,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return Center(child: Text('No products found'));
                 } else {
+                  final filteredProducts = _filterProducts(snapshot.data!);
+                  if (filteredProducts.isEmpty) {
+                    return Center(child: Text('No products match your criteria'));
+                  }
                   return GridView.builder(
                     padding: const EdgeInsets.all(16),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -112,9 +129,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
                     ),
-                    itemCount: snapshot.data!.length,
+                    itemCount: filteredProducts.length,
                     itemBuilder: (context, index) {
-                      return _buildProductCard(snapshot.data![index]);
+                      return _buildProductCard(filteredProducts[index]);
                     },
                   );
                 }
@@ -139,7 +156,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         selected: isSelected,
-        onSelected: (bool value) {},
+        onSelected: (bool value) {
+          setState(() {
+            _selectedCategory = label;
+          });
+        },
         backgroundColor: Colors.white,
         selectedColor: Colors.deepOrange,
         checkmarkColor: Colors.white,

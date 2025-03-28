@@ -7,7 +7,7 @@ class ChatView extends StatefulWidget {
   const ChatView({
     super.key, 
     required this.userName,
-    required this.productName,
+    required this.productName, required int receiverId, required int listingId,
   });
 
   @override

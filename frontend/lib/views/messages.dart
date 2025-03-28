@@ -74,7 +74,7 @@ class MessagesView extends StatelessWidget {
             MaterialPageRoute(
               builder: (context) => const ChatView(
                 userName: 'Ana García',
-                productName: 'iPhone 13 Pro',
+                productName: 'iPhone 13 Pro', receiverId: 1, listingId: 1,
               ),
             ),
           );

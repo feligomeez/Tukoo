@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  static const String _baseUrl = 'http://192.168.1.136:8080';
+  static const String _baseUrl = 'http://192.168.1.136:8082';
   static const String _tokenKey = 'jwt_token';
   static const String _userIdKey = 'user_id';
   static const String _usernameKey = 'username';
@@ -25,26 +25,29 @@ class AuthService {
         final userId = responseBody['userId'];
         final username = responseBody['username'];
 
-        print('Response body: $responseBody'); // Para debug
-
-        if (token != null && userId != null && username != null) {       
+        if (token != null && userId != null && username != null) {
           await _saveUserData(token, userId, username);
           return true;
+        } else {
+          return false;
         }
+      } else {
+        return false;
       }
-      return false;
     } catch (e) {
-      print('Error during login: $e');
-      print('Stack trace: ${StackTrace.current}'); // Para debug
       return false;
     }
   }
 
   Future<void> _saveUserData(String token, dynamic userId, String username) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
-    await prefs.setString(_userIdKey, userId.toString()); // Convertimos el userId a String
-    await prefs.setString(_usernameKey, username);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_tokenKey, token);
+      await prefs.setString(_userIdKey, userId.toString());
+      await prefs.setString(_usernameKey, username);
+    } catch (e) {
+      throw Exception('Failed to save user data');
+    }
   }
 
   Future<String?> getToken() async {
@@ -79,7 +82,6 @@ class AuthService {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('Error during registration: $e');
       return false;
     }
   }

@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/views/login.dart';
+import 'package:frontend/views/product_detail.dart';
 import 'package:frontend/views/reviews.dart';
 import 'package:frontend/views/custom_bottom_nav.dart';
 import 'package:frontend/services/auth_service.dart';
+import 'package:frontend/services/product_service.dart';
+import 'package:frontend/services/review_service.dart';
+import 'package:frontend/models/product.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -13,19 +18,50 @@ class ProfileView extends StatefulWidget {
 
 class _ProfileViewState extends State<ProfileView> {
   final AuthService _authService = AuthService();
+  final ProductService _productService = ProductService();
+  final ReviewService _reviewService = ReviewService();
+
   String _username = '';
+  List<Product> _userProducts = [];
+  double _averageRating = 0.0;
+  int _totalReviews = 0;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadUsername();
+    _loadUserData();
   }
 
-  Future<void> _loadUsername() async {
-    final username = await _authService.getUsername();
-    setState(() {
-      _username = username ?? 'Usuario';
-    });
+  Future<void> _loadUserData() async {
+    try {
+      final username = await _authService.getUsername();
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id');
+
+      if (userId != null) {
+        final products = await _productService.getUserProducts(int.parse(userId));
+        final reviewsData = await _reviewService.getUserReviews();
+
+        setState(() {
+          _username = username ?? 'Usuario';
+          _userProducts = products;
+          _averageRating = reviewsData.averageRating;
+          _totalReviews = reviewsData.totalReviews;
+          print(_totalReviews);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading user data: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -102,9 +138,9 @@ class _ProfileViewState extends State<ProfileView> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text(
-                            '4.5',
-                            style: TextStyle(
+                          Text(
+                            _averageRating.toStringAsFixed(1),
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: Colors.deepOrange,
@@ -114,15 +150,19 @@ class _ProfileViewState extends State<ProfileView> {
                           Row(
                             children: List.generate(5, (index) {
                               return Icon(
-                                index < 4 ? Icons.star : Icons.star_half,
+                                index < _averageRating.floor()
+                                    ? Icons.star
+                                    : index < _averageRating
+                                        ? Icons.star_half
+                                        : Icons.star_border,
                                 color: Colors.amber,
                                 size: 20,
                               );
                             }),
                           ),
-                          const Text(
-                            ' (128)',
-                            style: TextStyle(
+                          Text(
+                            ' ($_totalReviews)',
+                            style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 16,
                             ),
@@ -139,111 +179,153 @@ class _ProfileViewState extends State<ProfileView> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text(
-                'Mis Anuncios',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Mis Anuncios',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  Text(
+                    '${_userProducts.length} anuncios',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
           // Grid de anuncios
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.75,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (BuildContext context, int index) {
-                  return _buildProductCard();
-                },
-                childCount: 10,
-              ),
-            ),
-          ),
+          _isLoading
+              ? const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              : _userProducts.isEmpty
+                  ? SliverFillRemaining(
+                      child: Center(
+                        child: Text(
+                          'No tienes anuncios publicados',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ),
+                    )
+                  : SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      sliver: SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.75,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (BuildContext context, int index) {
+                            final product = _userProducts[index];
+                            return _buildProductCard(product);
+                          },
+                          childCount: _userProducts.length,
+                        ),
+                      ),
+                    ),
         ],
       ),
       bottomNavigationBar: const CustomBottomNav(currentIndex: 3),
     );
   }
 
-  Widget _buildProductCard() {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-        side: BorderSide(color: Colors.grey[200]!, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 3,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                image: DecorationImage(
-                  image: AssetImage('assets/anuncio_image.jpg'),
-                  fit: BoxFit.cover,
+  Widget _buildProductCard(Product product) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailView(
+              productId: product.id,
+            ),
+          ),
+        );
+      },
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+          side: BorderSide(color: Colors.grey[200]!, width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 3,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                  image: DecorationImage(
+                    image: product.images.isNotEmpty
+                        ? NetworkImage('http://192.168.1.136:8080/listing/images/${product.images.first}')
+                        : const AssetImage('assets/anuncio_image.jpg') as ImageProvider,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Kayak',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        '29€/dia',
-                        style: TextStyle(
-                          color: Colors.deepOrange,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                        const SizedBox(height: 4),
+                        Text(
+                          '${product.pricePerDay}€/dia',
+                          style: const TextStyle(
+                            color: Colors.deepOrange,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Madrid',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Text(
+                          product.location,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
