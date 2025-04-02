@@ -1,11 +1,14 @@
 package com.example.listingService.services;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.example.listingService.models.Listing;
 import com.example.listingService.models.Reservation;
 import com.example.listingService.repository.ReservationRepository;
 
@@ -14,6 +17,8 @@ public class ReservationService {
     @Autowired
     private ReservationRepository reservationRepository;
 
+    @Autowired
+    private ListingService listingService;
 
     public String createReservation(Reservation reservation) {
         // Validar fechas
@@ -50,6 +55,10 @@ public class ReservationService {
         return reservationRepository.findByListingId(listingId);
     }
 
+    public List<Reservation> getAllReservations() {
+        return reservationRepository.findAll();
+    }
+
     public String updateReservationStatus(Long id, String newStatus) {
         // Validar que el estado sea válido
         List<String> validStatuses = Arrays.asList("CONFIRMED", "CANCELLED", "PENDING");
@@ -68,5 +77,29 @@ public class ReservationService {
         reservation.setStatus(newStatus.toUpperCase());
         reservationRepository.save(reservation);
         return "Reservation status updated to " + newStatus.toUpperCase();
+    }
+
+    public List<Reservation> getReservationsByOwnerId(Long ownerId) {
+        try {
+            // Get all listings owned by this user
+            List<Listing> userListings = listingService.getListingsByOwnerId(ownerId);
+            
+            if (userListings.isEmpty()) {
+                return new ArrayList<>();
+            }
+            List<Long> listingIds = userListings.stream()
+                                              .map(Listing::getId)
+                                              .collect(Collectors.toList());
+
+            // Get all reservations for these listings
+            return reservationRepository.findByListingIds(listingIds);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Reservation> getReservationsByUserId(Long userId) {
+        return reservationRepository.findByUserId(userId);
     }
 }

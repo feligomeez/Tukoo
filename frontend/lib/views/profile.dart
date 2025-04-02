@@ -235,7 +235,7 @@ class _ProfileViewState extends State<ProfileView> {
                     ),
         ],
       ),
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 3),
+      bottomNavigationBar: const CustomBottomNav(currentIndex: 4),
     );
   }
 

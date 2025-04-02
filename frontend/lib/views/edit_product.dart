@@ -14,12 +14,23 @@ class EditProductView extends StatefulWidget {
 class _EditProductViewState extends State<EditProductView> {
   final _formKey = GlobalKey<FormState>();
   final _productService = ProductService();
-  
+
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late TextEditingController _priceController;
-  late TextEditingController _categoryController;
   late TextEditingController _locationController;
+  String? _selectedCategory;
+  final List<String> _categories = [
+    'Electrónica',
+    'Moda',
+    'Hogar',
+    'Deportes',
+    'Juguetes',
+    'Vehículos',
+    'Inmobiliaria',
+    'Servicios',
+    'Otros'
+  ];
   bool _isLoading = false;
 
   @override
@@ -28,8 +39,8 @@ class _EditProductViewState extends State<EditProductView> {
     _titleController = TextEditingController(text: widget.product.title);
     _descriptionController = TextEditingController(text: widget.product.description);
     _priceController = TextEditingController(text: widget.product.pricePerDay.toString());
-    _categoryController = TextEditingController(text: widget.product.category);
     _locationController = TextEditingController(text: widget.product.location);
+    _selectedCategory = widget.product.category; // Inicializa la categoría seleccionada
   }
 
   @override
@@ -37,7 +48,6 @@ class _EditProductViewState extends State<EditProductView> {
     _titleController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
-    _categoryController.dispose();
     _locationController.dispose();
     super.dispose();
   }
@@ -51,7 +61,7 @@ class _EditProductViewState extends State<EditProductView> {
           title: _titleController.text,
           description: _descriptionController.text,
           pricePerDay: double.parse(_priceController.text),
-          category: _categoryController.text,
+          category: _selectedCategory!,
           location: _locationController.text,
         );
         if (mounted) {
@@ -131,14 +141,25 @@ class _EditProductViewState extends State<EditProductView> {
                       },
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _categoryController,
+                    DropdownButtonFormField<String>(
+                      value: _selectedCategory,
                       decoration: const InputDecoration(
                         labelText: 'Categoría',
                         border: OutlineInputBorder(),
                       ),
+                      items: _categories.map((String category) {
+                        return DropdownMenuItem(
+                          value: category,
+                          child: Text(category),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedCategory = newValue;
+                        });
+                      },
                       validator: (value) =>
-                          value?.isEmpty ?? true ? 'La categoría es requerida' : null,
+                          value == null || value.isEmpty ? 'La categoría es requerida' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(

@@ -5,6 +5,7 @@ import '../services/product_service.dart';
 import '../models/product.dart';
 import 'chat.dart';
 import 'edit_product.dart';
+import 'reservation_preview.dart';
 
 class ProductDetailView extends StatefulWidget {
   final int productId;
@@ -330,7 +331,25 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                         ),
                       ),
                     ElevatedButton(
-                      onPressed: _showDateRangePicker,
+                      onPressed: () {
+                        if (_startDate == null) {
+                          _showDateRangePicker();
+                        } else if (_endDate == null) {
+                          // Continue selecting end date
+                        } else {
+                          // Navigate to reservation preview
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ReservationPreviewView(
+                                product: _product!,
+                                startDate: _startDate!,
+                                endDate: _endDate!,
+                              ),
+                            ),
+                          );
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.deepOrange,
                         minimumSize: const Size(double.infinity, 50),

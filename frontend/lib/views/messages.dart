@@ -1,9 +1,25 @@
 import 'package:flutter/material.dart';
+import '../services/chat_service.dart';
+import '../models/chat_conversation.dart';
 import './chat.dart';
 import './custom_bottom_nav.dart';
 
-class MessagesView extends StatelessWidget {
+class MessagesView extends StatefulWidget {
   const MessagesView({super.key});
+
+  @override
+  State<MessagesView> createState() => _MessagesViewState();
+}
+
+class _MessagesViewState extends State<MessagesView> {
+  final ChatService _chatService = ChatService();
+  late Future<List<ChatConversation>> _conversationsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _conversationsFuture = _chatService.getConversations();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,10 +61,25 @@ class MessagesView extends StatelessWidget {
           ),
           // Lista de conversaciones
           Expanded(
-            child: ListView.builder(
-              itemCount: 10,
-              itemBuilder: (context, index) {
-                return _buildConversationTile(context);
+            child: FutureBuilder<List<ChatConversation>>(
+              future: _conversationsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No tienes conversaciones'));
+                } else {
+                  final conversations = snapshot.data!;
+                  return ListView.builder(
+                    itemCount: conversations.length,
+                    itemBuilder: (context, index) {
+                      final conversation = conversations[index];
+                      return _buildConversationTile(context, conversation);
+                    },
+                  );
+                }
               },
             ),
           ),
@@ -58,7 +89,7 @@ class MessagesView extends StatelessWidget {
     );
   }
 
-  Widget _buildConversationTile(BuildContext context) {
+  Widget _buildConversationTile(BuildContext context, ChatConversation conversation) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
@@ -72,9 +103,11 @@ class MessagesView extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const ChatView(
-                userName: 'Ana García',
-                productName: 'iPhone 13 Pro', receiverId: 1, listingId: 1,
+              builder: (context) => ChatView(
+                userName: "Usuario ${conversation.participant2Id}",
+                productName: "Producto ${conversation.listingId}",
+                receiverId: conversation.participant2Id,
+                listingId: conversation.listingId,
               ),
             ),
           );
@@ -85,17 +118,17 @@ class MessagesView extends StatelessWidget {
         ),
         title: Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Text(
-                'Ana García',
-                style: TextStyle(
+                "Usuario ${conversation.participant2Id}",
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
               ),
             ),
             Text(
-              '12:30',
+              conversation.lastMessageTimestamp,
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 12,
@@ -108,7 +141,7 @@ class MessagesView extends StatelessWidget {
           children: [
             const SizedBox(height: 4),
             Text(
-              'Hola, ¿está disponible el producto?',
+              conversation.lastMessageContent,
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 14,
@@ -126,7 +159,7 @@ class MessagesView extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  'iPhone 13 Pro',
+                  "Producto ${conversation.listingId}",
                   style: TextStyle(
                     color: Colors.grey[400],
                     fontSize: 12,
@@ -139,4 +172,4 @@ class MessagesView extends StatelessWidget {
       ),
     );
   }
-} 
+}

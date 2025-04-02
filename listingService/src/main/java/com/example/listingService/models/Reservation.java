@@ -1,9 +1,9 @@
 package com.example.listingService.models;
 
 import java.time.LocalDateTime;
-
+import java.time.LocalDate;
+import java.time.LocalTime;
 import com.fasterxml.jackson.annotation.JsonFormat;
-
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,20 +18,32 @@ public class Reservation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "listing_id", nullable = false)
-    private Listing listing;
+    private Long listingId;
 
     @Column(nullable = false)
     private Long userId; 
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
     @Column(nullable = false)
-    private LocalDateTime startDate;
+    private LocalDate startDate;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
     @Column(nullable = false)
-    private LocalDateTime endDate;
+    private LocalDate endDate;
 
-    private String status; // "CONFIRMED", "CANCELLED", "PENDING"
+    private String status = "PENDING";
+
+    @PrePersist
+    public void prePersist() {
+        if (status == null) {
+            status = "PENDING";
+        }
+    }
+
+    // Convert LocalDate to LocalDateTime if needed
+    public LocalDateTime getStartDateTime() {
+        return startDate != null ? startDate.atStartOfDay() : null;
+    }
+
+    public LocalDateTime getEndDateTime() {
+        return endDate != null ? endDate.atTime(LocalTime.MAX) : null;
+    }
 }

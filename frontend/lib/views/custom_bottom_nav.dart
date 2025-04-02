@@ -3,6 +3,7 @@ import 'main.dart';
 import 'profile.dart';
 import 'publish.dart';
 import 'messages.dart';
+import 'reservations.dart';
 
 class CustomBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -54,9 +55,16 @@ class CustomBottomNav extends StatelessWidget {
               ),
               _buildNavItem(
                 context,
+                icon: Icons.calendar_today_outlined,
+                selectedIcon: Icons.calendar_today,
+                index: 3,
+                label: 'Reservas',
+              ),
+              _buildNavItem(
+                context,
                 icon: Icons.person_outline,
                 selectedIcon: Icons.person,
-                index: 3,
+                index: 4,
                 label: 'Perfil',
               ),
             ],
@@ -90,6 +98,8 @@ class CustomBottomNav extends StatelessWidget {
                   case 2:
                     return const MessagesView();
                   case 3:
+                    return const ReservationsView();
+                  case 4:
                     return const ProfileView();
                   default:
                     return HomeScreen();
@@ -122,4 +132,4 @@ class CustomBottomNav extends StatelessWidget {
       ),
     );
   }
-} 
+}

@@ -19,14 +19,31 @@ public class ReservationController {
 
     @PostMapping
     public ResponseEntity<String> createReservation(@RequestBody Reservation reservation){ 
-
         String response = reservationService.createReservation(reservation);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/owner/{ownerId}")
+    public ResponseEntity<List<Reservation>> getReservationsByOwnerId(@PathVariable Long ownerId) {
+        List<Reservation> reservations = reservationService.getReservationsByOwnerId(ownerId);
+        return ResponseEntity.ok(reservations);
     }
 
     @GetMapping("/{listingId}")
     public ResponseEntity<List<Reservation>> getReservations(@PathVariable Long listingId) {
         List<Reservation> reservations = reservationService.getReservationsByListing(listingId);
+        return ResponseEntity.ok(reservations);
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Reservation>> getReservationsByUserId(@PathVariable Long userId) {
+        List<Reservation> reservations = reservationService.getReservationsByUserId(userId);
+        return ResponseEntity.ok(reservations);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Reservation>> getAllReservations() {
+        List<Reservation> reservations = reservationService.getAllReservations();
         return ResponseEntity.ok(reservations);
     }
 
