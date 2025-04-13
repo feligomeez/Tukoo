@@ -251,54 +251,89 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                               ],
                             ),
                           ),
-                          if (_showCalendar)
-                            Container(
-                              margin: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey.withOpacity(0.1),
-                                    spreadRadius: 1,
-                                    blurRadius: 10,
-                                  ),
-                                ],
-                              ),
-                              child: TableCalendar(
-                                firstDay: DateTime.now(),
-                                lastDay: DateTime.now().add(const Duration(days: 365)),
-                                focusedDay: _startDate ?? DateTime.now(),
-                                selectedDayPredicate: (day) {
-                                  return isSameDay(_startDate, day) || 
-                                         isSameDay(_endDate, day);
-                                },
-                                rangeStartDay: _startDate,
-                                rangeEndDay: _endDate,
-                                calendarFormat: CalendarFormat.month,
-                                rangeSelectionMode: RangeSelectionMode.enforced,
-                                onDaySelected: (selectedDay, focusedDay) {
-                                  setState(() {
-                                    if (_startDate == null || _endDate != null) {
-                                      _startDate = selectedDay;
-                                      _endDate = null;
-                                    } else {
-                                      _endDate = selectedDay;
-                                      if (_endDate!.isBefore(_startDate!)) {
-                                        final temp = _startDate;
-                                        _startDate = _endDate;
-                                        _endDate = temp;
-                                      }
-                                      _showCalendar = false;
-                                    }
-                                  });
-                                },
-                              ),
-                            ),
                           const SizedBox(height: 80), // Space for bottom button
                         ],
                       ),
                     ),
+          if (_showCalendar)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.5), // Semi-transparent background
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          spreadRadius: 1,
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Selecciona las fechas',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: () {
+                                  setState(() {
+                                    _showCalendar = false;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        TableCalendar(
+                          firstDay: DateTime.now(),
+                          lastDay: DateTime.now().add(const Duration(days: 365)),
+                          focusedDay: _startDate ?? DateTime.now(),
+                          selectedDayPredicate: (day) {
+                            return isSameDay(_startDate, day) || 
+                                   isSameDay(_endDate, day);
+                          },
+                          rangeStartDay: _startDate,
+                          rangeEndDay: _endDate,
+                          calendarFormat: CalendarFormat.month,
+                          rangeSelectionMode: RangeSelectionMode.enforced,
+                          onDaySelected: (selectedDay, focusedDay) {
+                            setState(() {
+                              if (_startDate == null || _endDate != null) {
+                                _startDate = selectedDay;
+                                _endDate = null;
+                              } else {
+                                _endDate = selectedDay;
+                                if (_endDate!.isBefore(_startDate!)) {
+                                  final temp = _startDate;
+                                  _startDate = _endDate;
+                                  _endDate = temp;
+                                }
+                                _showCalendar = false;
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           if (!_isOwner)
             Positioned(
               left: 0,

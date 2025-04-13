@@ -5,7 +5,7 @@ import '../models/chat_conversation.dart';
 import 'dart:convert';
 
 class ChatService {
-  static const String _baseUrl = 'http://192.168.1.136:8084/api/chat';
+  static const String _baseUrl = 'http://192.168.18.141:8084/api/chat';
 
   /// Obtiene las conversaciones del usuario en sesión
   Future<List<ChatConversation>> getConversations() async {
@@ -92,40 +92,50 @@ class ChatService {
   /// Envía un mensaje
   Future<ChatMessage> sendMessage({
     required String content,
-    required int senderId,    // ID del usuario que envía (usuario actual)
-    required int receiverId,  // ID del otro usuario en la conversación
+    required int receiverId,  // Solo necesitamos receiverId
     required int listingId,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwt_token');
-    
-    if (token == null) {
-      throw Exception('Token not found in session');
-    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final currentUserId = prefs.getString('user_id');
 
-    // Agregar log para depuración
-    print('Enviando mensaje - De: $senderId A: $receiverId');
+      if (token == null || currentUserId == null) {
+        throw Exception('No authentication data found');
+      }
 
-    final response = await http.post(
-      Uri.parse('$_baseUrl/messages?listingId=$listingId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: json.encode({
-        'content': content,
-        'senderId': senderId,     // Asegurarse de que este sea el ID del usuario actual
-        'receiverId': receiverId, // Asegurarse de que este sea el ID del otro usuario
-      }),
-    );
+      final senderId = int.parse(currentUserId);
 
-    if (response.statusCode == 200) {
-      final message = ChatMessage.fromJson(json.decode(utf8.decode(response.bodyBytes)));
-      // Verificar que los IDs se asignaron correctamente
-      print('Mensaje enviado - De: ${message.senderId} A: ${message.receiverId}');
-      return message;
-    } else {
-      throw Exception('Failed to send message: ${response.statusCode}');
+      // Log para depuración
+      print('Enviando mensaje con token: $token');
+      print('Enviando mensaje - De: $senderId A: $receiverId');
+      print('Listing ID: $listingId');
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/messages?listingId=$listingId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'content': content,
+          'senderId': senderId,
+          'receiverId': receiverId,
+        }),
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final message = ChatMessage.fromJson(json.decode(utf8.decode(response.bodyBytes)));
+        return message;
+      } else {
+        throw Exception('Failed to send message: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Error sending message: $e');
+      throw Exception('Error sending message: $e');
     }
   }
 }

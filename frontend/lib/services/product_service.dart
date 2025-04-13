@@ -9,7 +9,7 @@ import 'package:path/path.dart' as path;
 import '../models/product.dart';
 
 class ProductService {
-  static const String _baseUrl = 'http://192.168.1.136:8080';
+  static const String _baseUrl = 'http://192.168.18.141:8080';
 
   Future<List<Product>> fetchProducts() async {
     final prefs = await SharedPreferences.getInstance();
@@ -489,62 +489,6 @@ class ProductService {
     }
   }
 
-  Future<List<Reservation>> getReceivedReservations() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
-      final userId = prefs.getString('user_id');
-
-      if (token == null || userId == null) {
-        throw Exception('Token or user ID not found');
-      }
-
-      final response = await http.get(
-        Uri.parse('$_baseUrl/reservations/owner/$userId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        List<dynamic> jsonList = json.decode(utf8.decode(response.bodyBytes));
-        return jsonList.map((json) => Reservation.fromJson(json)).toList();
-      } else {
-        throw Exception('Failed to load reservations: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error loading reservations: $e');
-    }
-  }
-
-  Future<List<Reservation>> getMadeReservations() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
-      final userId = prefs.getString('user_id');
-
-      if (token == null || userId == null) {
-        throw Exception('Token or user ID not found');
-      }
-
-      final response = await http.get(
-        Uri.parse('$_baseUrl/reservations/user/$userId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        List<dynamic> jsonList = json.decode(utf8.decode(response.bodyBytes));
-        return jsonList.map((json) => Reservation.fromJson(json)).toList();
-      } else {
-        throw Exception('Failed to load made reservations: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error loading made reservations: $e');
-    }
-  }
-
   Future<void> confirmReservation(int reservationId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -556,6 +500,30 @@ class ProductService {
 
       final response = await http.put(
         Uri.parse('$_baseUrl/reservations/$reservationId/confirm'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to confirm reservation: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error confirming reservation: $e');
+    }
+  }
+
+  Future<void> finishReservation(int reservationId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+
+      if (token == null) {
+        throw Exception('Token not found');
+      }
+
+      final response = await http.put(
+        Uri.parse('$_baseUrl/reservations/$reservationId/finish'),
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -590,6 +558,128 @@ class ProductService {
       }
     } catch (e) {
       throw Exception('Error canceling reservation: $e');
+    }
+  }
+
+  Future<void> reviewReservation(int reservationId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+
+      if (token == null) {
+        throw Exception('Token not found');
+      }
+
+      final response = await http.put(
+        Uri.parse('$_baseUrl/reservations/$reservationId/review'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to confirm reservation: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error confirming reservation: $e');
+    }
+  }
+
+  Future<void> startReservation(int reservationId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+
+      if (token == null) {
+        throw Exception('Token not found');
+      }
+
+      final response = await http.put(
+        Uri.parse('$_baseUrl/reservations/$reservationId/inprogress'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to start reservation: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error starting reservation: $e');
+    }
+  }
+
+  Future<List<Reservation>> getReservationsWithDetails(Future<List<Reservation>> reservationsFuture) async {
+    try {
+      final List<Reservation> reservations = await reservationsFuture;
+      
+      // Fetch listing details for each reservation
+      for (var reservation in reservations) {
+        final product = await fetchProductById(reservation.listingId);
+        reservation.updateListingDetails(product.title, product.pricePerDay);
+      }
+
+      return reservations;
+    } catch (e) {
+      throw Exception('Error loading reservation details: $e');
+    }
+  }
+
+  Future<List<Reservation>> getMadeReservations() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final userId = prefs.getString('user_id');
+
+      if (token == null || userId == null) {
+        throw Exception('Token or user ID not found');
+      }
+
+      final response = await http.get(
+        Uri.parse('$_baseUrl/reservations/user/$userId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> jsonList = json.decode(utf8.decode(response.bodyBytes));
+        final reservations = jsonList.map((json) => Reservation.fromJson(json)).toList();
+        return getReservationsWithDetails(Future.value(reservations));
+      } else {
+        throw Exception('Failed to load made reservations: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error loading made reservations: $e');
+    }
+  }
+
+  Future<List<Reservation>> getReceivedReservations() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final userId = prefs.getString('user_id');
+
+      if (token == null || userId == null) {
+        throw Exception('Token or user ID not found');
+      }
+
+      final response = await http.get(
+        Uri.parse('$_baseUrl/reservations/owner/$userId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> jsonList = json.decode(utf8.decode(response.bodyBytes));
+        final reservations = jsonList.map((json) => Reservation.fromJson(json)).toList();
+        return getReservationsWithDetails(Future.value(reservations));
+      } else {
+        throw Exception('Failed to load reservations: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error loading reservations: $e');
     }
   }
 }

@@ -14,11 +14,23 @@ class MessagesView extends StatefulWidget {
 class _MessagesViewState extends State<MessagesView> {
   final ChatService _chatService = ChatService();
   late Future<List<ChatConversation>> _conversationsFuture;
+  String _searchQuery = ''; // Añadir variable para la búsqueda
 
   @override
   void initState() {
     super.initState();
     _conversationsFuture = _chatService.getConversations();
+  }
+
+  // Método para filtrar las conversaciones
+  List<ChatConversation> _filterConversations(List<ChatConversation> conversations) {
+    if (_searchQuery.isEmpty) {
+      return conversations;
+    }
+    return conversations.where((conversation) {
+      final userName = "Usuario ${conversation.participant2Id}".toLowerCase();
+      return userName.contains(_searchQuery.toLowerCase());
+    }).toList();
   }
 
   @override
@@ -40,13 +52,18 @@ class _MessagesViewState extends State<MessagesView> {
       ),
       body: Column(
         children: [
-          // Barra de búsqueda
+          // Barra de búsqueda actualizada
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             color: Colors.white,
             child: TextField(
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
               decoration: InputDecoration(
-                hintText: 'Buscar conversaciones...',
+                hintText: 'Buscar por nombre de usuario...',
                 hintStyle: TextStyle(color: Colors.grey[400]),
                 prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
                 filled: true,
@@ -59,7 +76,7 @@ class _MessagesViewState extends State<MessagesView> {
               ),
             ),
           ),
-          // Lista de conversaciones
+          // Lista de conversaciones actualizada
           Expanded(
             child: FutureBuilder<List<ChatConversation>>(
               future: _conversationsFuture,
@@ -71,11 +88,18 @@ class _MessagesViewState extends State<MessagesView> {
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const Center(child: Text('No tienes conversaciones'));
                 } else {
-                  final conversations = snapshot.data!;
+                  final filteredConversations = _filterConversations(snapshot.data!);
+                  
+                  if (filteredConversations.isEmpty) {
+                    return Center(
+                      child: Text('No se encontraron conversaciones con "$_searchQuery"'),
+                    );
+                  }
+
                   return ListView.builder(
-                    itemCount: conversations.length,
+                    itemCount: filteredConversations.length,
                     itemBuilder: (context, index) {
-                      final conversation = conversations[index];
+                      final conversation = filteredConversations[index];
                       return _buildConversationTile(context, conversation);
                     },
                   );

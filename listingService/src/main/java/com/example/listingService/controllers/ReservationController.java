@@ -59,6 +59,25 @@ public class ReservationController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/{id}/finish")
+    public ResponseEntity<String> finishReservation(@PathVariable Long id) {
+        String response = reservationService.updateReservationStatus(id, "FINISHED");
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}/inprogress")
+    public ResponseEntity<String> inProgressReservation(@PathVariable Long id) {
+        String response = reservationService.updateReservationStatus(id, "IN_PROGRESS");
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}/review")
+    public ResponseEntity<String> reviewReservation(@PathVariable Long id) {
+        String response = reservationService.updateReservationStatus(id, "REVIEWED");
+        return ResponseEntity.ok(response);
+    }
+
+
     @PutMapping("/{id}/status")
     public ResponseEntity<String> updateReservationStatus(
             @PathVariable Long id,

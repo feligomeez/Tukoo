@@ -1,3 +1,4 @@
 {
-    "dart.flutterSdkPath": "/Library/Developer/flutter"
+    "dart.flutterSdkPath": "/Library/Developer/flutter",
+    "C_Cpp.errorSquiggles": "disabled"
 }

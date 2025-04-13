@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/services/review_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/reservation.dart';
 import '../services/product_service.dart';
 import 'custom_bottom_nav.dart';
@@ -39,6 +41,9 @@ class _ReservationsViewState extends State<ReservationsView> with SingleTickerPr
 
   Widget _buildReservationCard(Reservation reservation, {required bool showActions}) {
     final bool isPending = reservation.status == 'PENDING';
+    final bool isConfirmed = reservation.status == 'CONFIRMED';
+    final bool isInProgress = reservation.status == 'IN_PROGRESS';
+    final bool isFinished = reservation.status == 'FINISHED';
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -48,7 +53,7 @@ class _ReservationsViewState extends State<ReservationsView> with SingleTickerPr
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              reservation.listingTitle,
+              reservation.listingTitle ?? 'Cargando...',
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -68,15 +73,17 @@ class _ReservationsViewState extends State<ReservationsView> with SingleTickerPr
                 color: Colors.grey[600],
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Precio total: ${reservation.totalPrice.toStringAsFixed(2)}€',
-              style: const TextStyle(
-                color: Colors.deepOrange,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+            if (reservation.pricePerDay != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Precio total: ${reservation.totalPrice.toStringAsFixed(2)}€',
+                style: const TextStyle(
+                  color: Colors.deepOrange,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
-            ),
+            ],
             const SizedBox(height: 8),
             Text(
               'Estado: ${reservation.status}',
@@ -157,10 +164,238 @@ class _ReservationsViewState extends State<ReservationsView> with SingleTickerPr
                 ],
               ),
             ],
+            if (isConfirmed && showActions) ...[
+              const SizedBox(height: 16),
+              Center(
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    try {
+                      await _productService.startReservation(reservation.id);
+                      setState(() {
+                        _loadReservations();
+                      });
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Reserva iniciada'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.play_arrow),
+                  label: const Text('Comenzar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 243, 170, 33),
+                  ),
+                ),
+              ),
+            ],
+            if (isInProgress && showActions) ...[
+              const SizedBox(height: 16),
+              Center(
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    try {
+                      await _productService.finishReservation(reservation.id);
+                      setState(() {
+                        _loadReservations();
+                      });
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Reserva finalizada'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.check_circle),
+                  label: const Text('Finalizar Reserva'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 76, 162, 175),
+                  ),
+                ),
+              ),
+            ],
+            if (isFinished && !showActions && !reservation.hasReview) ...[
+              const SizedBox(height: 16),
+              Center(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    _showReviewDialog(reservation);
+                  },
+                  icon: const Icon(Icons.star),
+                  label: const Text('Dejar Reseña'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  void _showReviewDialog(Reservation reservation) async {
+    try {
+      final product = await _productService.fetchProductById(reservation.listingId);
+      
+      double rating = 0;
+      final commentController = TextEditingController();
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (dialogContext) {  // Renombrado para claridad
+            return StatefulBuilder(
+              builder: (context, dialogSetState) {  // Renombrado para claridad
+                return AlertDialog(
+                  title: const Text('Dejar Reseña'),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Calificación:'),
+                        Slider(
+                          value: rating,
+                          min: 0,
+                          max: 5,
+                          divisions: 10,
+                          label: rating.toString(),
+                          onChanged: (value) {
+                            dialogSetState(() {
+                              rating = value;
+                            });
+                          },
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(5, (index) {
+                            if (index < rating.floor()) {
+                              return const Icon(Icons.star, color: Colors.amber);
+                            } else if (index < rating) {
+                              return const Icon(Icons.star_half, color: Colors.amber);
+                            }
+                            return const Icon(Icons.star_border, color: Colors.amber);
+                          }),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: commentController,
+                          maxLines: 3,
+                          decoration: const InputDecoration(
+                            labelText: 'Comentario',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('Cancelar'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (rating == 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Por favor, selecciona una calificación')),
+                          );
+                          return;
+                        }
+                        if (commentController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Por favor, escribe un comentario')),
+                          );
+                          return;
+                        }
+
+                        try {
+                          final prefs = await SharedPreferences.getInstance();
+                          final reviewerName = prefs.getString('username') ?? 'Usuario';
+
+                          // Crear la review
+                          await ReviewService().createReview(
+                            userId: product.ownerId,
+                            reviewerName: reviewerName,
+                            listingId: reservation.listingId,
+                            rating: rating,
+                            comment: commentController.text,
+                          );
+
+                          // Actualizar el estado de la reserva a REVIEWED
+                          await _productService.reviewReservation(reservation.id);
+
+                          if (mounted) {
+                            // Cerrar el diálogo
+                            Navigator.pop(dialogContext);
+                            
+                            // Actualizar el estado del widget principal
+                            setState(() {
+                              // Recargar las reservas
+                              _receivedReservationsFuture = _productService.getReceivedReservations();
+                              _madeReservationsFuture = _productService.getMadeReservations();
+                            });
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Reseña enviada correctamente'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error al enviar la reseña: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text('Enviar Reseña'),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar los datos del producto: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -219,6 +454,8 @@ class _ReservationsViewState extends State<ReservationsView> with SingleTickerPr
     final reservations = snapshot.data!;
     final pendingReservations = reservations.where((r) => r.status == 'PENDING').toList();
     final confirmedReservations = reservations.where((r) => r.status == 'CONFIRMED').toList();
+    final inProgressReservations = reservations.where((r) => r.status == 'IN_PROGRESS').toList();
+    final finishedReservations = reservations.where((r) => r.status == 'FINISHED').toList();
 
     return SingleChildScrollView(
       child: Column(
@@ -249,6 +486,32 @@ class _ReservationsViewState extends State<ReservationsView> with SingleTickerPr
               ),
             ),
             ...confirmedReservations.map((r) => _buildReservationCard(r, showActions: showActions)),
+          ],
+          if (inProgressReservations.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'En Progreso',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ...inProgressReservations.map((r) => _buildReservationCard(r, showActions: showActions)),
+          ],
+          if (finishedReservations.isNotEmpty && !showActions) ...[
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Finalizadas',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ...finishedReservations.map((r) => _buildReservationCard(r, showActions: showActions)),
           ],
         ],
       ),

@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  static const String _baseUrl = 'http://192.168.1.136:8082';
+  static const String _baseUrl = 'http://192.168.18.141:8082';
   static const String _tokenKey = 'jwt_token';
   static const String _userIdKey = 'user_id';
   static const String _usernameKey = 'username';

@@ -259,13 +259,9 @@ class _ChatViewState extends State<ChatView> {
                 onPressed: () async {
                   if (_messageController.text.isNotEmpty) {
                     try {
-                      // Imprimir para depuración
-                      print('Enviando mensaje como usuario $_userId a usuario ${widget.receiverId}');
-                      
                       await _chatService.sendMessage(
                         content: _messageController.text,
-                        senderId: _userId,         // ID del usuario actual
-                        receiverId: widget.receiverId, // ID del otro usuario
+                        receiverId: widget.receiverId, // Solo pasamos el receiverId
                         listingId: widget.listingId,
                       );
 

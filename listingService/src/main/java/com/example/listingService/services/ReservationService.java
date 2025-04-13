@@ -61,9 +61,9 @@ public class ReservationService {
 
     public String updateReservationStatus(Long id, String newStatus) {
         // Validar que el estado sea válido
-        List<String> validStatuses = Arrays.asList("CONFIRMED", "CANCELLED", "PENDING");
+        List<String> validStatuses = Arrays.asList("CONFIRMED", "CANCELLED", "PENDING", "FINISHED", "REVIEWED", "IN_PROGRESS");
         if (!validStatuses.contains(newStatus.toUpperCase())) {
-            return "Invalid status. Valid statuses are: CONFIRMED, CANCELLED, PENDING";
+            return "Invalid status. Valid statuses are: CONFIRMED, CANCELLED, PENDING, FINISHED, REVIEWED, IN_PROGRESS.";
         }
 
         // Buscar la reserva

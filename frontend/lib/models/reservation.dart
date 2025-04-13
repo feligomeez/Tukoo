@@ -3,22 +3,24 @@ class Reservation {
   final DateTime startDate;
   final DateTime endDate;
   final int listingId;
-  final String listingTitle;
-  final double pricePerDay;
+  String? listingTitle;  // Make nullable since we'll fetch it later
+  double? pricePerDay;   // Make nullable since we'll fetch it later
   final String status;
+  bool hasReview;  // Nueva propiedad
 
   Reservation({
     required this.id,
     required this.startDate,
     required this.endDate,
     required this.listingId,
-    required this.listingTitle,
-    required this.pricePerDay,
+    this.listingTitle,
+    this.pricePerDay,
     required this.status,
+    this.hasReview = false,  // Valor por defecto
   });
 
   int get numberOfDays => endDate.difference(startDate).inDays + 1;
-  double get totalPrice => pricePerDay * numberOfDays;
+  double get totalPrice => (pricePerDay ?? 0) * numberOfDays;
 
   factory Reservation.fromJson(Map<String, dynamic> json) {
     return Reservation(
@@ -26,9 +28,13 @@ class Reservation {
       startDate: DateTime.parse(json['startDate']),
       endDate: DateTime.parse(json['endDate']),
       listingId: json['listingId'],
-      listingTitle: json['listingTitle'] ?? 'Sin título',
-      pricePerDay: (json['pricePerDay'] ?? 0.0).toDouble(),
       status: json['status'],
     );
+  }
+
+  // Method to update listing details
+  void updateListingDetails(String title, double price) {
+    listingTitle = title;
+    pricePerDay = price;
   }
 }
