@@ -14,23 +14,40 @@ class _RegisterViewState extends State<RegisterView> {
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   String? _selectedCity;
+  String _searchQuery = '';
   final AuthService _authService = AuthService();
 
   final List<String> _cities = [
-    'Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Zaragoza',
-    'Málaga', 'Murcia', 'Palma', 'Las Palmas', 'Bilbao',
-    'Alicante', 'Córdoba', 'Valladolid', 'Vigo', 'Gijón',
-    'Hospitalet de Llobregat', 'Vitoria', 'La Coruña', 'Granada', 'Elche',
-    'Oviedo', 'Badalona', 'Cartagena', 'Terrassa', 'Jerez de la Frontera',
-    'Sabadell', 'Móstoles', 'Santa Cruz de Tenerife', 'Pamplona', 'Almería'
+    'A Coruña', 'Albacete', 'Alcalá de Henares', 'Alcobendas', 'Alcorcón', 'Algeciras',
+    'Alicante', 'Almería', 'Ávila', 'Badajoz', 'Badalona', 'Barcelona', 'Bilbao', 'Burgos',
+    'Cáceres', 'Cádiz', 'Cartagena', 'Castellón', 'Ceuta', 'Ciudad Real', 'Córdoba', 'Cuenca',
+    'Elche', 'Fuenlabrada', 'Getafe', 'Gijón', 'Girona', 'Granada', 'Guadalajara', 'Huelva',
+    'Huesca', 'Jaén', 'Jerez de la Frontera', 'Las Palmas', 'León', 'Lleida', 'Logroño',
+    'Lugo', 'Madrid', 'Málaga', 'Marbella', 'Melilla', 'Mérida', 'Móstoles', 'Murcia',
+    'Ourense', 'Oviedo', 'Palencia', 'Palma', 'Pamplona', 'Pontevedra', 'Reus',
+    'Sabadell', 'Salamanca', 'San Sebastián', 'Santa Cruz de Tenerife', 'Santander',
+    'Santiago de Compostela', 'Segovia', 'Sevilla', 'Soria', 'Tarragona', 'Terrassa',
+    'Toledo', 'Torrejón de Ardoz', 'Valencia', 'Valladolid', 'Vigo', 'Vitoria',
+    'Zamora', 'Zaragoza'
   ];
+
+  List<String> get _filteredCities {
+    if (_searchQuery.isEmpty) {
+      return _cities;
+    }
+    return _cities.where((city) =>
+      city.toLowerCase().contains(_searchQuery.toLowerCase())
+    ).toList();
+  }
 
   @override
   void dispose() {
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -216,39 +233,105 @@ class _RegisterViewState extends State<RegisterView> {
                             },
                           ),
                           const SizedBox(height: 16),
-                          DropdownButtonFormField<String>(
-                            value: _selectedCity,
-                            decoration: InputDecoration(
-                              labelText: 'Ciudad',
-                              prefixIcon: const Icon(Icons.location_city, color: Colors.deepOrange),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.grey[300]!),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Colors.deepOrange),
-                              ),
-                            ),
-                            items: _cities.map((String city) {
-                              return DropdownMenuItem(
-                                value: city,
-                                child: Text(city),
-                              );
-                            }).toList(),
-                            onChanged: (String? newValue) {
-                              setState(() {
-                                _selectedCity = newValue;
-                              });
-                            },
+                          FormField<String>(
                             validator: (value) {
-                              if (value == null || value.isEmpty) {
+                              if (_selectedCity == null || _selectedCity!.isEmpty) {
                                 return 'Por favor selecciona una ciudad';
                               }
                               return null;
+                            },
+                            builder: (FormFieldState<String> state) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: state.hasError ? Colors.red : Colors.grey[300]!,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: ListTile(
+                                      leading: const Icon(Icons.location_city, color: Colors.deepOrange),
+                                      title: Text(
+                                        _selectedCity ?? 'Selecciona una ciudad',
+                                        style: TextStyle(
+                                          color: _selectedCity == null ? Colors.grey[600] : Colors.black,
+                                        ),
+                                      ),
+                                      trailing: const Icon(Icons.arrow_drop_down, color: Colors.deepOrange),
+                                      onTap: () {
+                                        _searchQuery = '';
+                                        _searchController.clear();
+                                        showDialog(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            return StatefulBuilder(
+                                              builder: (BuildContext context, StateSetter setDialogState) {
+                                                return AlertDialog(
+                                                  title: const Text('Selecciona una ciudad'),
+                                                  content: SizedBox(
+                                                    width: double.maxFinite,
+                                                    child: Column(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        TextField(
+                                                          controller: _searchController,
+                                                          decoration: const InputDecoration(
+                                                            hintText: 'Buscar ciudad...',
+                                                            prefixIcon: Icon(Icons.search, color: Colors.deepOrange),
+                                                            border: OutlineInputBorder(),
+                                                          ),
+                                                          onChanged: (value) {
+                                                            setDialogState(() {
+                                                              _searchQuery = value;
+                                                            });
+                                                          },
+                                                        ),
+                                                        const SizedBox(height: 8),
+                                                        Expanded(
+                                                          child: ListView.builder(
+                                                            shrinkWrap: true,
+                                                            itemCount: _filteredCities.length,
+                                                            itemBuilder: (context, index) {
+                                                              final city = _filteredCities[index];
+                                                              return ListTile(
+                                                                title: Text(city),
+                                                                onTap: () {
+                                                                  setState(() {
+                                                                    _selectedCity = city;
+                                                                    state.didChange(city);
+                                                                  });
+                                                                  Navigator.pop(context);
+                                                                },
+                                                              );
+                                                            },
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            );
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  if (state.hasError)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 12, top: 8),
+                                      child: Text(
+                                        state.errorText!,
+                                        style: const TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
                             },
                           ),
                           const SizedBox(height: 24),
@@ -263,6 +346,18 @@ class _RegisterViewState extends State<RegisterView> {
                                 );
                                 
                                 if (success) {
+                                  // ignore: use_build_context_synchronously
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('¡Registro completado con éxito! Por favor, inicia sesión.'),
+                                      backgroundColor: Colors.green,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                  
+                                  // Esperar 2 segundos para que el usuario pueda leer el mensaje
+                                  await Future.delayed(const Duration(seconds: 2));
+                                  
                                   // ignore: use_build_context_synchronously
                                   Navigator.pushReplacement(
                                     context,

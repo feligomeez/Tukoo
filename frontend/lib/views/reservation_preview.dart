@@ -89,12 +89,11 @@ class ReservationPreviewView extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.grey[200],
                 image: DecorationImage(
-                  image: product.images.isNotEmpty
-                      ? NetworkImage(
-                          'http://192.168.1.136:8080/listing/images/${product.images.first}')
+                  image: product.imageUrls.isNotEmpty
+                      ? NetworkImage(product.imageUrls.first)
                       : const AssetImage('assets/anuncio_image.jpg')
                           as ImageProvider,
-                  fit: BoxFit.cover,
+                  fit: BoxFit.cover,                
                 ),
               ),
             ),

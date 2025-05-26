@@ -42,12 +42,17 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       final userId = prefs.getString('user_id');
       final product = await _productService.fetchProductById(widget.productId);
       
+      debugPrint('Product loaded - ID: ${product.id}');
+      debugPrint('Number of images: ${product.imageUrls.length}');
+      debugPrint('Image URLs: ${product.imageUrls}');
+      
       setState(() {
         _product = product;
         _isLoading = false;
         _isOwner = userId != null && int.parse(userId) == product.ownerId;
       });
     } catch (e) {
+      debugPrint('Error loading product details: $e');
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -59,6 +64,60 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     setState(() {
       _showCalendar = !_showCalendar;
     });
+  }
+
+  Widget _buildImageCarousel() {
+    debugPrint('Building image carousel');
+    debugPrint('Has images: ${_product!.imageUrls.isNotEmpty}');
+    
+    return SizedBox(
+      height: 300,
+      child: _product!.imageUrls.isEmpty
+          ? (() {
+              debugPrint('No images available, showing placeholder');
+              return Image.asset(
+                'assets/placeholder_image.jpg',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  debugPrint('Error loading placeholder image: $error');
+                  return const Center(
+                    child: Icon(Icons.image_not_supported),
+                  );
+                },
+              );
+            })()
+          : PageView.builder(
+              itemCount: _product!.imageUrls.length,
+              itemBuilder: (context, index) {
+                debugPrint('Loading image at index $index: ${_product!.imageUrls[index]}');
+                return Image.network(
+                  _product!.imageUrls[index],
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) {
+                      debugPrint('Image $index loaded successfully');
+                      return child;
+                    }
+                    debugPrint('Loading image $index: ${loadingProgress.cumulativeBytesLoaded}/${loadingProgress.expectedTotalBytes ?? "unknown"}');
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    debugPrint('Error loading image $index: $error');
+                    return const Center(
+                      child: Icon(Icons.error),
+                    );
+                  },
+                );
+              },
+            ),
+    );
   }
 
   @override
@@ -136,21 +195,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            height: 300,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              image: DecorationImage(
-                                image: _product!.images.isNotEmpty
-                                    ? NetworkImage(
-                                        'http://192.168.1.136:8080/listing/images/${_product!.images.first}')
-                                    : const AssetImage('assets/anuncio_image.jpg')
-                                        as ImageProvider,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
+                          _buildImageCarousel(),
                           Container(
                             padding: const EdgeInsets.all(16),
                             color: Colors.white,

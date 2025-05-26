@@ -19,6 +19,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     futureProducts = ProductService().fetchProducts();
+    
+    // Verificar assets
+    DefaultAssetBundle.of(context).loadString('AssetManifest.json').then((manifest) {
+      debugPrint('Available assets: $manifest');
+    });
   }
 
   List<Product> _filterProducts(List<Product> products) {
@@ -173,17 +178,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildProductCard(Product product) {
-    return InkWell( // Cambiamos GestureDetector por InkWell para mejor feedback
+    return InkWell(
       onTap: () {
         debugPrint('Tap detectado en producto: ${product.id}');
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) {
-              debugPrint('Construyendo ProductDetailView para producto: ${product.id}');
-              return ProductDetailView(productId: product.id);
-            },
+            builder: (context) => ProductDetailView(productId: product.id),
           ),
-        ).then((_) => debugPrint('Regresó de ProductDetailView'));
+        );
       },
       child: Card(
         elevation: 0,
@@ -191,74 +193,101 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(15),
           side: BorderSide(color: Colors.grey[200]!, width: 1),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 3,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                  image: DecorationImage(
-                    image: const AssetImage('assets/anuncio_image.jpg'),
-                    fit: BoxFit.cover,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Image container with fixed height ratio
+                SizedBox(
+                  height: constraints.maxHeight * 0.6,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                    child: product.imageUrls.isNotEmpty
+                        ? Image.network(
+                            product.imageUrls.first,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                  color: Colors.deepOrange,
+                                ),
+                              );
+                            },
+                            errorBuilder: (_, __, ___) => Image.asset(
+                              'assets/placeholder_image.jpg',
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                            ),
+                          )
+                        : Image.asset(
+                            'assets/placeholder_image.jpg',
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                          ),
                   ),
                 ),
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
+                // Content container with remaining height
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          product.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${product.pricePerDay.toStringAsFixed(2)}€/día',
-                          style: const TextStyle(
-                            color: Colors.deepOrange,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            product.location,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              product.title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${product.pricePerDay.toStringAsFixed(2)}€/día',
+                              style: const TextStyle(
+                                color: Colors.deepOrange,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Icon(Icons.location_on, size: 12, color: Colors.grey[600]),
+                            const SizedBox(width: 2),
+                            Expanded(
+                              child: Text(
+                                product.location,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 10,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );

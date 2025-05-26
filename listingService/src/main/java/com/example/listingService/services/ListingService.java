@@ -2,6 +2,7 @@ package com.example.listingService.services;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,6 +86,18 @@ public class ListingService {
     public String deleteListing(Long id){
         repository.deleteById(id);
         return "Listing deleted successfully";
+    }
+
+    public void addImagesToListing(Long listingId, List<String> newUrls) {
+        Listing listing = repository.findById(listingId)
+                .orElseThrow(() -> new RuntimeException("Listing not found"));
+        
+        if (listing.getImageUrls() == null) {
+            listing.setImageUrls(new ArrayList<>());
+        }
+        
+        listing.getImageUrls().addAll(newUrls);
+        repository.save(listing);
     }
     
 }

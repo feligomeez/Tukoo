@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../models/product.dart';
 import '../services/product_service.dart';
 
@@ -33,6 +35,10 @@ class _EditProductViewState extends State<EditProductView> {
   ];
   bool _isLoading = false;
 
+  final ImagePicker _picker = ImagePicker();
+  List<File> _newImages = [];
+  List<String> _existingImages = [];
+
   @override
   void initState() {
     super.initState();
@@ -41,6 +47,7 @@ class _EditProductViewState extends State<EditProductView> {
     _priceController = TextEditingController(text: widget.product.pricePerDay.toString());
     _locationController = TextEditingController(text: widget.product.location);
     _selectedCategory = widget.product.category; // Inicializa la categoría seleccionada
+    _existingImages = widget.product.imageUrls;
   }
 
   @override
@@ -50,6 +57,129 @@ class _EditProductViewState extends State<EditProductView> {
     _priceController.dispose();
     _locationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImages() async {
+    try {
+      final List<XFile> images = await _picker.pickMultiImage();
+      if (images.isNotEmpty) {
+        setState(() {
+          _newImages.addAll(images.map((xFile) => File(xFile.path)));
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking images: $e');
+    }
+  }
+
+  Widget _buildImagePicker() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Imágenes',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 120,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                // Botón para añadir imágenes
+                Container(
+                  width: 100,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.add_photo_alternate, size: 40),
+                    onPressed: _pickImages,
+                  ),
+                ),
+                // Imágenes existentes
+                ..._existingImages.map((url) => Stack(
+                  children: [
+                    Container(
+                      width: 100,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        image: DecorationImage(
+                          image: NetworkImage(url),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 12,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _existingImages.remove(url);
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close, size: 20),
+                        ),
+                      ),
+                    ),
+                  ],
+                )).toList(),
+                // Nuevas imágenes seleccionadas
+                ..._newImages.map((file) => Stack(
+                  children: [
+                    Container(
+                      width: 100,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        image: DecorationImage(
+                          image: FileImage(file),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 12,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _newImages.remove(file);
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close, size: 20),
+                        ),
+                      ),
+                    ),
+                  ],
+                )).toList(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _updateProduct() async {
@@ -64,8 +194,16 @@ class _EditProductViewState extends State<EditProductView> {
           category: _selectedCategory!,
           location: _locationController.text,
         );
+
+        // Subir nuevas imágenes si hay alguna
+        if (_newImages.isNotEmpty) {
+          debugPrint('Subiendo ${_newImages.length} imágenes nuevas...');
+          await _productService.uploadImages(_newImages, widget.product.id);
+          debugPrint('Imágenes subidas correctamente');
+        }
+
         if (mounted) {
-          Navigator.pop(context); // Return to detail view
+          Navigator.pop(context, true); // Return to detail view
         }
       } catch (e) {
         if (mounted) {
@@ -106,6 +244,8 @@ class _EditProductViewState extends State<EditProductView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    _buildImagePicker(),
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _titleController,
                       decoration: const InputDecoration(

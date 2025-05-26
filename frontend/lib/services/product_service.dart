@@ -9,7 +9,7 @@ import 'package:path/path.dart' as path;
 import '../models/product.dart';
 
 class ProductService {
-  static const String _baseUrl = 'http://192.168.18.141:8080';
+  static const String _baseUrl = 'http://192.168.1.135:8080';
 
   Future<List<Product>> fetchProducts() async {
     final prefs = await SharedPreferences.getInstance();
@@ -129,66 +129,6 @@ class ProductService {
     }
   }
 
-  Future<void> uploadImage(File imageFile, int listingId) async {
-    try {
-      debugPrint('Starting image upload for listing ID: $listingId');
-      debugPrint('Image file path: ${imageFile.path}');
-
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
-
-      if (token == null) {
-        debugPrint('Token not found in SharedPreferences');
-        throw Exception('Token not found');
-      }
-
-      final url = '$_baseUrl/listing/$listingId/images';
-      debugPrint('Upload URL: $url');
-
-      var request = http.MultipartRequest('POST', Uri.parse(url));
-      
-      // Add headers
-      request.headers.addAll({
-        'Authorization': 'Bearer $token',
-        'Accept': '*/*',
-      });
-      debugPrint('Headers added: ${request.headers}');
-      
-      // Get file extension and determine content type
-      final extension = path.extension(imageFile.path).toLowerCase();
-      final mimeType = extension == '.png' ? 'png' : 'jpeg';
-      debugPrint('File type detected: $mimeType');
-
-      // Add the file
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'image',
-          imageFile.path,
-          contentType: MediaType('image', mimeType),
-        ),
-      );
-      debugPrint('File added to request');
-      
-      // Send request
-      debugPrint('Sending request...');
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
-      
-      debugPrint('Response status code: ${response.statusCode}');
-      debugPrint('Response body: ${response.body}');
-
-      if (response.statusCode != 200) {
-        debugPrint('Upload failed with status: ${response.statusCode}');
-        throw Exception('Failed to upload image: ${response.statusCode}\nBody: ${response.body}');
-      }
-
-      debugPrint('Image upload successful');
-    } catch (e) {
-      debugPrint('Error in uploadImage: $e');
-      throw Exception('Error uploading image: $e');
-    }
-  }
-
   Future<void> uploadImages(List<File> imageFiles, int listingId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -198,130 +138,44 @@ class ProductService {
         throw Exception('Token not found');
       }
 
+      debugPrint('Preparing to upload ${imageFiles.length} images for listing $listingId');
+      final uri = Uri.parse('$_baseUrl/listing/uploadImages/$listingId');
+      
+      var request = http.MultipartRequest('POST', uri);
+      
+      // Añadir el token de autorización
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+      });
+
+      // Añadir los archivos
       for (var imageFile in imageFiles) {
-        var request = http.MultipartRequest(
-          'POST',
-          Uri.parse('$_baseUrl/listing/$listingId/images'),
-        );
-        
-        request.headers['Authorization'] = 'Bearer $token';
-        
+        debugPrint('Adding file: ${imageFile.path}');
         request.files.add(
           await http.MultipartFile.fromPath(
-            'image',
+            'files', // Este nombre debe coincidir con el parámetro esperado en el backend
             imageFile.path,
           ),
         );
-        
-        var response = await request.send();
-        var responseBody = await response.stream.bytesToString();
-        debugPrint('Image upload response: $responseBody');
-        
-        if (response.statusCode != 200) {
-          throw Exception('Failed to upload image: ${response.statusCode}');
-        }
       }
-      debugPrint('All images uploaded successfully');
+
+      debugPrint('Sending request to: ${request.url}');
+      debugPrint('Headers: ${request.headers}');
+      
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to upload images: ${response.statusCode}\nBody: ${response.body}');
+      }
+
+      debugPrint('Images uploaded successfully');
     } catch (e) {
-      debugPrint('Error uploading images: $e');
+      debugPrint('Error in uploadImages: $e');
       throw Exception('Error uploading images: $e');
-    }
-  }
-
-  Future<void> createListingWithImage({
-    required String title,
-    required String description,
-    required double pricePerDay,
-    required String category,
-    required String location,
-    required File imageFile,
-  }) async {
-    try {
-      // 1. Create listing and get ID
-      final listingId = await createListing(
-        title: title,
-        description: description,
-        pricePerDay: pricePerDay,
-        category: category,
-        location: location,
-      );
-
-      if (listingId == null) {
-        throw Exception('Failed to create listing');
-      }
-
-      // 2. Upload image
-      await uploadImage(imageFile, listingId);
-
-      debugPrint('Listing created with ID: $listingId and image uploaded successfully');
-    } catch (e) {
-      debugPrint('Error in createListingWithImage: $e');
-      throw Exception('Failed to create listing with image: $e');
-    }
-  }
-
-  Future<void> createListingWithImages({
-    required String title,
-    required String description,
-    required double pricePerDay,
-    required String category,
-    required String location,
-    required List<File> imageFiles,
-  }) async {
-    try {
-      debugPrint('Starting createListingWithImages process...');
-      debugPrint('Number of images to upload: ${imageFiles.length}');
-
-      // Validate we have images to upload
-      if (imageFiles.isEmpty) {
-        debugPrint('Error: No images provided');
-        throw Exception('No images provided');
-      }
-
-      debugPrint('Creating listing with title: $title');
-      // 1. Create listing and get ID
-      final listingId = await createListing(
-        title: title,
-        description: description,
-        pricePerDay: pricePerDay,
-        category: category,
-        location: location,
-      );
-
-      if (listingId == null) {
-        debugPrint('Error: Listing creation failed - no ID returned');
-        throw Exception('Failed to create listing: No ID returned');
-      }
-      debugPrint('Listing created successfully with ID: $listingId');
-
-      // 2. Validate image files
-      debugPrint('Validating image files...');
-      for (var imageFile in imageFiles) {
-        debugPrint('Checking file: ${imageFile.path}');
-        if (!await imageFile.exists()) {
-          debugPrint('Error: Image file does not exist: ${imageFile.path}');
-          throw Exception('Image file does not exist: ${imageFile.path}');
-        }
-      }
-      debugPrint('All image files validated successfully');
-
-      // 3. Upload images
-      debugPrint('Starting image upload process...');
-      await uploadImages(imageFiles, listingId);
-      debugPrint('All images uploaded successfully for listing ID: $listingId');
-
-    } on SocketException catch (e) {
-      debugPrint('Network error occurred: $e');
-      throw Exception('Connection error: Please check your internet connection');
-    } on HttpException catch (e) {
-      debugPrint('HTTP error occurred: $e');
-      throw Exception('HTTP error: ${e.message}');
-    } on FormatException catch (e) {
-      debugPrint('Data format error occurred: $e');
-      throw Exception('Invalid data format: ${e.message}');
-    } catch (e) {
-      debugPrint('Unexpected error occurred: $e');
-      throw Exception('Failed to create listing with images: $e');
     }
   }
 

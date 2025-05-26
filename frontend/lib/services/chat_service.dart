@@ -5,7 +5,7 @@ import '../models/chat_conversation.dart';
 import 'dart:convert';
 
 class ChatService {
-  static const String _baseUrl = 'http://192.168.18.141:8084/api/chat';
+  static const String _baseUrl = 'http://192.168.1.135:8084/api/chat';
 
   /// Obtiene las conversaciones del usuario en sesión
   Future<List<ChatConversation>> getConversations() async {

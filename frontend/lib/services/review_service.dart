@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/review.dart';
 
 class ReviewService {
-  static const String _baseUrl = 'http://192.168.18.141:8081';
+  static const String _baseUrl = 'http://192.168.1.135:8083';
 
   Future<ReviewsData> getUserReviews() async {
     try {

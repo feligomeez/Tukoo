@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:frontend/views/main.dart';
 import './custom_bottom_nav.dart';
 import '../services/product_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class PublishView extends StatefulWidget {
   const PublishView({super.key});
@@ -23,6 +25,97 @@ class _PublishViewState extends State<PublishView> {
   ];
   final ProductService _productService = ProductService();
   bool _isLoading = false; // Para controlar el estado de carga
+
+  final ImagePicker _picker = ImagePicker();
+  List<File> _selectedImages = [];
+
+  Future<void> _pickImages() async {
+    try {
+      final List<XFile> images = await _picker.pickMultiImage();
+      if (images.isNotEmpty) {
+        setState(() {
+          _selectedImages.addAll(images.map((xFile) => File(xFile.path)));
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking images: $e');
+    }
+  }
+
+  Widget _buildImagePicker() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Imágenes',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            height: 120,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                // Botón para añadir imágenes
+                Container(
+                  width: 100,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.add_photo_alternate, size: 40),
+                    onPressed: _pickImages,
+                  ),
+                ),
+                // Imágenes seleccionadas
+                ..._selectedImages.map((file) => Stack(
+                  children: [
+                    Container(
+                      width: 100,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        image: DecorationImage(
+                          image: FileImage(file),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 12,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedImages.remove(file);
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close, size: 20),
+                        ),
+                      ),
+                    ),
+                  ],
+                )).toList(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -182,6 +275,8 @@ class _PublishViewState extends State<PublishView> {
                         return null;
                       },
                     ),
+                    const SizedBox(height: 16),
+                    _buildImagePicker(),
                     const SizedBox(height: 24),
 
                     // Botón publicar
@@ -197,30 +292,34 @@ class _PublishViewState extends State<PublishView> {
                                   });
 
                                   try {
-                                    print('Intentando crear el anuncio...');
-                                    await _productService.createListing(
+                                    debugPrint('Intentando crear el anuncio...');
+                                    final listingId = await _productService.createListing(
                                       title: _titleController.text,
                                       description: _descriptionController.text,
                                       pricePerDay: double.parse(_priceController.text),
                                       category: _selectedCategory!,
                                       location: _locationController.text,
                                     );
-                                    print('Anuncio creado correctamente en la base de datos.');
+
+                                    // Subir imágenes si hay alguna seleccionada
+                                    if (_selectedImages.isNotEmpty && listingId != null) {
+                                      debugPrint('Subiendo ${_selectedImages.length} imágenes...');
+                                      await _productService.uploadImages(_selectedImages, listingId);
+                                      debugPrint('Imágenes subidas correctamente');
+                                    }
 
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(content: Text('Anuncio creado correctamente')),
                                     );
+                                    
                                     if (mounted) {
-                                      Navigator.push(
+                                      Navigator.pushReplacement(
                                         context,
-                                        MaterialPageRoute(builder: (context) =>  HomeScreen()),
+                                        MaterialPageRoute(builder: (context) => HomeScreen()),
                                       );
-                                      print('Navegación de regreso completada.');
-                                    } else {
-                                      print('El widget ya no está montado. No se puede navegar.');
                                     }
                                   } catch (e) {
-                                    print('Error al crear el anuncio: $e');
+                                    debugPrint('Error: $e');
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text('Error: $e')),
                                     );
@@ -229,9 +328,6 @@ class _PublishViewState extends State<PublishView> {
                                       setState(() {
                                         _isLoading = false;
                                       });
-                                      print('Estado de _isLoading actualizado a false.');
-                                    } else {
-                                      print('El widget ya no está montado. No se puede actualizar el estado.');
                                     }
                                   }
                                 }

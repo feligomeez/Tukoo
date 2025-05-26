@@ -19,12 +19,28 @@ public class SecurityConfig {
 
     private final JwtFilter jwtAuthFilter;
 
+    
+    private static final String[] WHITE_LIST_URL = {
+            "/swagger-ui/**",
+            "/swagger-ui.html",
+            "/swagger-resources/**",
+            "/swagger-resources",
+            "/v3/api-docs/**",
+            "/v3/api-docs.yaml",
+            "/webjars/**",
+            "/configuration/ui",
+            "/configuration/security"
+    };
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(req ->
-                req.anyRequest().authenticated()
+                req.requestMatchers(WHITE_LIST_URL)
+                   .permitAll()
+                   .anyRequest()
+                   .authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(STATELESS))
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

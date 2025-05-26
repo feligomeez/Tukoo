@@ -9,7 +9,7 @@ class Product {
   final String location;
   final int ownerId;
   final String? createdAt;
-  final List<String> images;
+  final List<String> imageUrls;
 
   Product({
     required this.id,
@@ -20,7 +20,7 @@ class Product {
     required this.location,
     required this.ownerId,
     this.createdAt,
-    this.images = const [],
+    this.imageUrls = const [],
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -34,7 +34,7 @@ class Product {
         location: json['location'] as String? ?? '',
         ownerId: json['ownerId'] as int? ?? 0,
         createdAt: json['createdAt'] as String?,
-        images: (json['images'] as List<dynamic>?)?.cast<String>() ?? [],
+        imageUrls: (json['imageUrls'] as List<dynamic>?)?.cast<String>() ?? [],
       );
     } catch (e) {
       debugPrint('Error parsing Product from JSON: $e');

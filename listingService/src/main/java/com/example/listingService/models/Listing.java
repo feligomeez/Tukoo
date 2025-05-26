@@ -1,10 +1,23 @@
 package com.example.listingService.models;
 
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import jakarta.persistence.Convert;
+import io.hypersistence.utils.hibernate.type.json.JsonType;
+import org.hibernate.annotations.Type;
 
-import jakarta.persistence.*;
-import lombok.*;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 
 @Entity
@@ -37,6 +50,7 @@ public class Listing {
     private String createdAt;
     private String updatedAt;
 
-    @OneToMany(mappedBy = "listing", cascade = CascadeType.ALL)
-    private List<ListingImage> images;
+    @Column(columnDefinition = "jsonb")
+    @Type(JsonType.class)
+    private List<String> imageUrls;
 }
