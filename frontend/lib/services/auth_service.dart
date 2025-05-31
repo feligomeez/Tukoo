@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,14 +11,27 @@ class AuthService {
 
   Future<bool> login(String email, String password) async {
     try {
+      final url = '$_baseUrl/auth/login';
+      debugPrint('Attempting login to: $url');
+      debugPrint('Request body: ${json.encode({
+        'email': email,
+        'password': password,
+      })}');
+
       final response = await http.post(
-        Uri.parse('$_baseUrl/auth/login'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         body: json.encode({
           'email': email,
           'password': password,
         }),
       );
+
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
@@ -35,6 +49,7 @@ class AuthService {
         return false;
       }
     } catch (e) {
+      debugPrint('Login error: $e');
       return false;
     }
   }

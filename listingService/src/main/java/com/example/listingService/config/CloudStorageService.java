@@ -3,10 +3,10 @@ package com.example.listingService.config;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.storage.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.UUID;
 
@@ -14,13 +14,15 @@ import java.util.UUID;
 public class CloudStorageService {
 
     private final Storage storage;
+    private final String bucketName;
 
-    @Value("${gcp.bucket.name}")
-    private String bucketName;
+    public CloudStorageService(@Value("${gcp.bucket.name}") String bucketName,
+                             @Value("${gcp.credentials.path}") String credentialsPath) throws IOException {
+        this.bucketName = bucketName;
 
-    public CloudStorageService(@Value("${gcp.credentials.path}") String credentialsPath) throws IOException {
+        ClassPathResource resource = new ClassPathResource(credentialsPath);
         this.storage = StorageOptions.newBuilder()
-                .setCredentials(ServiceAccountCredentials.fromStream(new FileInputStream(credentialsPath)))
+                .setCredentials(ServiceAccountCredentials.fromStream(resource.getInputStream()))
                 .build()
                 .getService();
     }
