@@ -30,11 +30,15 @@ public class CloudStorageService {
     public String uploadFile(MultipartFile file) throws IOException {
         String fileName = UUID.randomUUID() + "-" + file.getOriginalFilename();
         BlobId blobId = BlobId.of(bucketName, fileName);
-        BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType(file.getContentType()).build();
+
+        // Puedes detectar el tipo real si quieres, aquí lo forzamos a image/png
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
+                .setContentType("image/png") // Fuerza el tipo de contenido
+                .setContentDisposition("inline") // Importante para que el navegador lo muestre
+                .build();
 
         storage.create(blobInfo, file.getBytes());
 
-        // Retornar URL pública (si el bucket tiene acceso público)
         return String.format("https://storage.googleapis.com/%s/%s", bucketName, fileName);
     }
 }

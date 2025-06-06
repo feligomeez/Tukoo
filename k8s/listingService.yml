@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tukoo-listingapp
+spec:
+  type: ClusterIP
+  selector:
+    app: tukoo-listingapp
+  ports:
+    - port: 8080
+      targetPort: 8080

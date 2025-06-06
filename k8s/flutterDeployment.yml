@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tukoo-flutterapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tukoo-flutterapp
+  template:
+    metadata:
+      labels:
+        app: tukoo-flutterapp
+    spec:
+      containers:
+        - name: tukoo-flutterapp
+          image: feligomeez/tukoo-flutterapp:latest
+          ports:
+            - containerPort: 80

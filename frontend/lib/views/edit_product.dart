@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -36,7 +38,7 @@ class _EditProductViewState extends State<EditProductView> {
   bool _isLoading = false;
 
   final ImagePicker _picker = ImagePicker();
-  List<File> _newImages = [];
+  List<XFile> _newImages = [];
   List<String> _existingImages = [];
 
   @override
@@ -64,7 +66,7 @@ class _EditProductViewState extends State<EditProductView> {
       final List<XFile> images = await _picker.pickMultiImage();
       if (images.isNotEmpty) {
         setState(() {
-          _newImages.addAll(images.map((xFile) => File(xFile.path)));
+          _newImages.addAll(images);
         });
       }
     } catch (e) {
@@ -104,76 +106,90 @@ class _EditProductViewState extends State<EditProductView> {
                     onPressed: _pickImages,
                   ),
                 ),
-                // Imágenes existentes
-                ..._existingImages.map((url) => Stack(
-                  children: [
-                    Container(
-                      width: 100,
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        image: DecorationImage(
-                          image: NetworkImage(url),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
+                // Imágenes existentes (de la red)
+                ..._existingImages.map((url) => Container(
+                  width: 100,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    image: DecorationImage(
+                      image: NetworkImage(url),
+                      fit: BoxFit.cover,
                     ),
-                    Positioned(
-                      top: 4,
-                      right: 12,
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _existingImages.remove(url);
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
+                  ),
+                )),
+                // Nuevas imágenes seleccionadas (previsualización)
+                ..._newImages.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final file = entry.value;
+                  return FutureBuilder<Uint8List>(
+                    future: file.readAsBytes(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                        return Stack(
+                          children: [
+                            Container(
+                              width: 100,
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.memory(
+                                  snapshot.data!,
+                                  fit: BoxFit.cover,
+                                  width: 100,
+                                  height: 100,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 12,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _newImages.removeAt(index);
+                                  });
+                                },
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close, size: 20, color: Colors.red),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      } else if (snapshot.hasError) {
+                        return Container(
+                          width: 100,
+                          height: 100,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.grey[300],
                           ),
-                          child: const Icon(Icons.close, size: 20),
-                        ),
-                      ),
-                    ),
-                  ],
-                )).toList(),
-                // Nuevas imágenes seleccionadas
-                ..._newImages.map((file) => Stack(
-                  children: [
-                    Container(
-                      width: 100,
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        image: DecorationImage(
-                          image: FileImage(file),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 4,
-                      right: 12,
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _newImages.remove(file);
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
+                          child: const Icon(Icons.error, color: Colors.red),
+                        );
+                      } else {
+                        return Container(
+                          width: 100,
+                          height: 100,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.grey[300],
                           ),
-                          child: const Icon(Icons.close, size: 20),
-                        ),
-                      ),
-                    ),
-                  ],
-                )).toList(),
+                          child: const Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                    },
+                  );
+                }),
               ],
             ),
           ),

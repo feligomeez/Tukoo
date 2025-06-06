@@ -1,5 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:image_picker/image_picker.dart';
 import 'package:frontend/models/reservation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -129,7 +132,7 @@ class ProductService {
     }
   }
 
-  Future<void> uploadImages(List<File> imageFiles, int listingId) async {
+  Future<void> uploadImages(List<dynamic> imageFiles, int listingId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
@@ -142,21 +145,30 @@ class ProductService {
       final uri = Uri.parse('$_baseUrl/listing/uploadImages/$listingId');
       
       var request = http.MultipartRequest('POST', uri);
-      
-      // Añadir el token de autorización
       request.headers.addAll({
         'Authorization': 'Bearer $token',
       });
 
-      // Añadir los archivos
       for (var imageFile in imageFiles) {
-        debugPrint('Adding file: ${imageFile.path}');
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'files', // Este nombre debe coincidir con el parámetro esperado en el backend
-            imageFile.path,
-          ),
-        );
+        if (kIsWeb && imageFile is XFile) {
+          // Flutter web: usa fromBytes
+          Uint8List bytes = await imageFile.readAsBytes();
+          request.files.add(
+            http.MultipartFile.fromBytes(
+              'files',
+              bytes,
+              filename: imageFile.name,
+            ),
+          );
+        } else if (imageFile is File) {
+          // Flutter móvil/escritorio: usa fromPath
+          request.files.add(
+            await http.MultipartFile.fromPath(
+              'files',
+              imageFile.path,
+            ),
+          );
+        }
       }
 
       debugPrint('Sending request to: ${request.url}');

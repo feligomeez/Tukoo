@@ -4,6 +4,7 @@ import './custom_bottom_nav.dart';
 import '../services/product_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:typed_data';
 
 class PublishView extends StatefulWidget {
   const PublishView({super.key});
@@ -27,14 +28,14 @@ class _PublishViewState extends State<PublishView> {
   bool _isLoading = false; // Para controlar el estado de carga
 
   final ImagePicker _picker = ImagePicker();
-  List<File> _selectedImages = [];
+  List<XFile> _selectedImages = [];
 
   Future<void> _pickImages() async {
     try {
       final List<XFile> images = await _picker.pickMultiImage();
       if (images.isNotEmpty) {
         setState(() {
-          _selectedImages.addAll(images.map((xFile) => File(xFile.path)));
+          _selectedImages.addAll(images);
         });
       }
     } catch (e) {
@@ -74,41 +75,78 @@ class _PublishViewState extends State<PublishView> {
                     onPressed: _pickImages,
                   ),
                 ),
-                // Imágenes seleccionadas
-                ..._selectedImages.map((file) => Stack(
-                  children: [
-                    Container(
-                      width: 100,
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        image: DecorationImage(
-                          image: FileImage(file),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 4,
-                      right: 12,
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedImages.remove(file);
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
+                // Previsualización de imágenes seleccionadas
+                ..._selectedImages.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final file = entry.value;
+                  return FutureBuilder<Uint8List>(
+                    future: file.readAsBytes(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                        return Stack(
+                          children: [
+                            Container(
+                              width: 100,
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.memory(
+                                  snapshot.data!,
+                                  fit: BoxFit.cover,
+                                  width: 100,
+                                  height: 100,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 12,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedImages.removeAt(index);
+                                  });
+                                },
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close, size: 20, color: Colors.red),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      } else if (snapshot.hasError) {
+                        return Container(
+                          width: 100,
+                          height: 100,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.grey[300],
                           ),
-                          child: const Icon(Icons.close, size: 20),
-                        ),
-                      ),
-                    ),
-                  ],
-                )).toList(),
+                          child: const Icon(Icons.error, color: Colors.red),
+                        );
+                      } else {
+                        return Container(
+                          width: 100,
+                          height: 100,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.grey[300],
+                          ),
+                          child: const Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                    },
+                  );
+                }).toList(),
               ],
             ),
           ),

@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tukoo-reviewapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tukoo-reviewapp
+  template:
+    metadata:
+      labels:
+        app: tukoo-reviewapp
+    spec:
+      containers:
+        - name: tukoo-reviewapp
+          image: feligomeez/tukoo-reviewapp:latest
+          ports:
+            - containerPort: 8080

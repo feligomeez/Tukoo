@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tukoo-chatapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tukoo-chatapp
+  template:
+    metadata:
+      labels:
+        app: tukoo-chatapp
+    spec:
+      containers:
+        - name: tukoo-chatapp
+          image: feligomeez/tukoo-chatapp:latest
+          ports:
+            - containerPort: 8080

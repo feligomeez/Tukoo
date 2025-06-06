@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tukoo-userapp
+spec:
+  type: ClusterIP
+  selector:
+    app: tukoo-userapp
+  ports:
+    - port: 8080
+      targetPort: 8080

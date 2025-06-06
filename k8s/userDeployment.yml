@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tukoo-userapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tukoo-userapp
+  template:
+    metadata:
+      labels:
+        app: tukoo-userapp
+    spec:
+      containers:
+        - name: tukoo-userapp
+          image: feligomeez/tukoo-userapp:latest
+          ports:
+            - containerPort: 8080
